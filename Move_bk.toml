@@ -1,0 +1,15 @@
+[package]
+name = "knw_evos"
+version = "0.0.1"
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "c525ba6489261ff6db65e87bf9a3fdda0a6c7be3" }
+NftProtocol = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "a86c338261e20d6f319029ff10522ed6e1b5d48c", subdir = "contracts/nft_protocol"}
+Launchpad = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "a86c338261e20d6f319029ff10522ed6e1b5d48c", subdir = "contracts/launchpad"}
+Witness = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "a86c338261e20d6f319029ff10522ed6e1b5d48c", subdir = "contracts/witness"}
+Request = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "a86c338261e20d6f319029ff10522ed6e1b5d48c", subdir = "contracts/request"}
+
+[addresses]
+knw_evos =  "0x0"
+sui =  "0x2"
+evosgen = "96388e62a375ca869e5fc15e648398e45803628f3abfbe4f786fc9e5532c7645"

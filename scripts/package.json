@@ -1,0 +1,21 @@
+{
+  "name": "scripts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "npm run build": "npx tsc",
+    "public_mint": "npx tsc && node build/src/mint.js",
+    "wl_mint": "npx tsc && node build/src/mint_wl_enabled.js",
+    "wl_spot_left_for_account": "npx tsc && node build/src/wl_mint_left_for_account.js",
+    "is_whitelisted": "npx tsc && node build/src/is_whitelisted.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@mysten/sui.js": "^0.32.2",
+    "@originbyte/js-sdk": "^0.29.54",
+    "typescript": "^5.0.4"
+  }
+}

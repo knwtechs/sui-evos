@@ -1,0 +1,16 @@
+[package]
+name = "knw_evos"
+version = "0.0.1"
+
+[dependencies]
+NftProtocol = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/nft_protocol"}
+Launchpad = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/launchpad"}
+Permissions = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/permissions"}
+Utils = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/utils"}
+Request = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/request"}
+Pseudorandom = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/pseudorandom"}
+knw_genesis = {local = "../genesis" }
+[addresses]
+knw_evos =  "0x0"
+sui =  "0x2"
+evosgen = "96388e62a375ca869e5fc15e648398e45803628f3abfbe4f786fc9e5532c7645"

@@ -1,0 +1,20 @@
+[package]
+name = "knw_genesis"
+version = "0.0.1"
+published-at = "0x6c6ec8508df81ff71dc58962933dc2d5edacb481278586ae4f07ce910f6210b4"
+authors = ["Ev0s", "KNW Technologies"]
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "ae1212baf8f0837e25926d941db3d26a61c1bea2" }
+NftProtocol = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/nft_protocol"}
+Launchpad = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/launchpad"}
+Permissions = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/permissions"}
+Utils = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/utils"}
+Request = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/request"}
+
+[addresses]
+knw_genesis =  "0x6c6ec8508df81ff71dc58962933dc2d5edacb481278586ae4f07ce910f6210b4"
+sui =  "0x2"
+
+#mint_Tracker = 0xa587afa8a92a1daf2742b864e1f05eafa5a5df6b162a4d3176c46548cb5a2734
+#mint_Tracker_cap = 0x02711db0f515b2cf30599ab81390b394100468cefca95464c5cd1398978c78ab
