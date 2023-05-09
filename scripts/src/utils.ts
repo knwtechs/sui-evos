@@ -8,6 +8,7 @@ import {
     PRIVATE_KEY_SIZE,
     Keypair
 } from "@mysten/sui.js";
+import { get_connection } from "./rpc";
 import { readFileSync} from 'fs';
 
 export function generate_account(){
@@ -35,6 +36,6 @@ export async function get_balance(account: SuiAddress, provider: JsonRpcProvider
 
 export function get_signer(account: Keypair, connection?: Connection) {    
     if(!connection)
-        connection = new Connection({fullnode: "https://fullnode.mainnet.sui.io:443"});
+        connection = get_connection();
     return new RawSigner(account, new JsonRpcProvider(connection));
 }

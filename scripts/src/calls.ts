@@ -2,7 +2,6 @@ import {
   RawSigner, 
   SuiAddress, 
   TransactionBlock,
-  bcs,
   getExecutionStatusType
 } from "@mysten/sui.js";
 import { GENESIS_PACKAGE_ID, GENESIS_MODULE_NAME, MINT_TRACKER_ID } from './ids';
