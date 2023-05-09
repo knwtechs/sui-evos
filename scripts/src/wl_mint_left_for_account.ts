@@ -10,4 +10,4 @@ wl_mint_left_for_account(
   txblock,
   signer,
   account.getPublicKey().toSuiAddress()
-).then(console.log);
+).then((spot) => console.log(`\n\t+ WL spots for ${account.getPublicKey().toSuiAddress()}: ${spot}\n`));

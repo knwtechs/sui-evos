@@ -10,4 +10,4 @@ public_mint(
   txblock,
   signer,
   1
-).then(console.log);
+).then((status) => console.log(`\n\tMint: ${status}`));

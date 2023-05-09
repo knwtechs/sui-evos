@@ -140,7 +140,7 @@ async function wl_mint_left_for_account(tx, signer, account) {
     let ret = ispx.results?.at(0)?.returnValues;
     if (!ret)
         return false;
-    console.log(ret[0]);
+    //console.log(ret[0]);
     return ret[0][0][0];
 }
 exports.wl_mint_left_for_account = wl_mint_left_for_account;

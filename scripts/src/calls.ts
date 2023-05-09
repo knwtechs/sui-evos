@@ -1,9 +1,7 @@
 import {
-  ObjectId,
   RawSigner, 
   SuiAddress, 
   TransactionBlock,
-  bcs,
   getExecutionStatusType
 } from "@mysten/sui.js";
 import { GENESIS_PACKAGE_ID, GENESIS_MODULE_NAME, MINT_TRACKER_ID } from './ids';
@@ -69,7 +67,7 @@ export async function public_mint(
   if(status == 'success'){
     console.log("SUCCESS");
   }
-  return [txn, status];
+  return status;
 }
 
 export async function whitelist_mint(
@@ -125,12 +123,8 @@ export async function whitelist_mint(
     },
   });
   let status = getExecutionStatusType(txn);
-  console.log(txn);
-  if(status == 'success'){
-    console.log("SUCCESS");
-  }
-
-  return txn;
+  //console.log(txn);
+  return status;
 }
 
 export async function is_whitelisted(
