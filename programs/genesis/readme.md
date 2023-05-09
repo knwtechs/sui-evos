@@ -1,6 +1,6 @@
 ## Program has been deployed on mainnet
 ### PACKAGE ID ###
-0x92a626e346d34a829b83b3235c79fb9cfc5b3a55493ae24ee34f1849b7232e80
+0x6c6ec8508df81ff71dc58962933dc2d5edacb481278586ae4f07ce910f6210b4
 
-### TRACKER OBJ ID ###
-0xc5c9e5d0ec7f6f7dc86c0a30c81d85df62e159738ddc500f8e8a66bd94710f83
+### MintTracker ID ###
+0xa587afa8a92a1daf2742b864e1f05eafa5a5df6b162a4d3176c46548cb5a2734
