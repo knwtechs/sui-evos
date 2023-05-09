@@ -207,7 +207,19 @@ module knw_genesis::evosgenesisegg {
         ofield::borrow<address, Position>(&tracker.id, account)
     }
 
-    public fun is_whitelisted(
+    public entry fun get_wl_spot_count(
+        tracker: &MintTracker,
+        account: address,
+        _ctx: &mut TxContext
+    ): u64 {
+        if(!ofield::exists_<address>(&tracker.id, account)){
+            0
+        }else{
+            ofield::borrow<address, Position>(&tracker.id, account).amount
+        }
+    }
+
+    public entry fun is_whitelisted(
         tracker: &MintTracker,
         account: address,
         _ctx: &mut TxContext
