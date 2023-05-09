@@ -3,6 +3,7 @@ import {
   RawSigner, 
   SuiAddress, 
   TransactionBlock,
+  bcs,
   getExecutionStatusType
 } from "@mysten/sui.js";
 import { GENESIS_PACKAGE_ID, GENESIS_MODULE_NAME, MINT_TRACKER_ID } from './ids';
@@ -145,23 +146,13 @@ export async function is_whitelisted(
       tx.pure(account)
     ]
   });
-  
-  const txn = await signer.signAndExecuteTransactionBlock({
-    transactionBlock: tx,
-    options: {
-      showEffects: true,
-      showObjectChanges: true,
-      showBalanceChanges: true,
-      showEvents: true
-    },
-  });
 
-  let status = getExecutionStatusType(txn);
-  if(status == 'success'){
-    console.log("SUCCESS: ", );
-  }
-
-  return txn;
+  const ispx = await signer.provider.devInspectTransactionBlock({transactionBlock: tx, sender: account});
+  if(ispx.results?.length == 0) return false;
+  let ret = ispx.results?.at(0)?.returnValues;
+  if(!ret) return false;
+  // console.log(ret[0][0][0]);
+  return ret[0][0][0] == 1;
 }
 
 /* 
@@ -175,26 +166,17 @@ export async function wl_mint_left_for_account(
 ) {
 
   tx.moveCall({
-    target: `${GENESIS_PACKAGE_ID}::${GENESIS_MODULE_NAME}::get_position`,
+    target: `${GENESIS_PACKAGE_ID}::${GENESIS_MODULE_NAME}::get_wl_spot_count`,
     arguments: [
       tx.object(MINT_TRACKER_ID),
       tx.pure(account)
     ]
   });
   
-  const txn = await signer.signAndExecuteTransactionBlock({
-    transactionBlock: tx,
-    options: {
-      showEffects: true,
-      showObjectChanges: true,
-      showBalanceChanges: true
-    },
-  });
-  let status = getExecutionStatusType(txn);
-  console.log(txn);
-  if(status == 'success'){
-    console.log("SUCCESS");
-  }
-
-  return txn;
+  const ispx = await signer.provider.devInspectTransactionBlock({transactionBlock: tx, sender: account});
+  if(ispx.results?.length == 0) return false;
+  let ret = ispx.results?.at(0)?.returnValues;
+  if(!ret) return false;
+  //console.log(ret[0]);
+  return ret[0][0][0];
 }

@@ -112,20 +112,14 @@ async function is_whitelisted(tx, signer, account) {
             tx.pure(account)
         ]
     });
-    const txn = await signer.signAndExecuteTransactionBlock({
-        transactionBlock: tx,
-        options: {
-            showEffects: true,
-            showObjectChanges: true,
-            showBalanceChanges: true,
-            showEvents: true
-        },
-    });
-    let status = (0, sui_js_1.getExecutionStatusType)(txn);
-    if (status == 'success') {
-        console.log("SUCCESS");
-    }
-    return txn;
+    const ispx = await signer.provider.devInspectTransactionBlock({ transactionBlock: tx, sender: account });
+    if (ispx.results?.length == 0)
+        return false;
+    let ret = ispx.results?.at(0)?.returnValues;
+    if (!ret)
+        return false;
+    // console.log(ret[0][0][0]);
+    return ret[0][0][0] == 1;
 }
 exports.is_whitelisted = is_whitelisted;
 /*
@@ -134,25 +128,19 @@ exports.is_whitelisted = is_whitelisted;
  */
 async function wl_mint_left_for_account(tx, signer, account) {
     tx.moveCall({
-        target: `${ids_1.GENESIS_PACKAGE_ID}::${ids_1.GENESIS_MODULE_NAME}::get_position`,
+        target: `${ids_1.GENESIS_PACKAGE_ID}::${ids_1.GENESIS_MODULE_NAME}::get_wl_spot_count`,
         arguments: [
             tx.object(ids_1.MINT_TRACKER_ID),
             tx.pure(account)
         ]
     });
-    const txn = await signer.signAndExecuteTransactionBlock({
-        transactionBlock: tx,
-        options: {
-            showEffects: true,
-            showObjectChanges: true,
-            showBalanceChanges: true
-        },
-    });
-    let status = (0, sui_js_1.getExecutionStatusType)(txn);
-    console.log(txn);
-    if (status == 'success') {
-        console.log("SUCCESS");
-    }
-    return txn;
+    const ispx = await signer.provider.devInspectTransactionBlock({ transactionBlock: tx, sender: account });
+    if (ispx.results?.length == 0)
+        return false;
+    let ret = ispx.results?.at(0)?.returnValues;
+    if (!ret)
+        return false;
+    console.log(ret[0]);
+    return ret[0][0][0];
 }
 exports.wl_mint_left_for_account = wl_mint_left_for_account;
