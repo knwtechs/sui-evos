@@ -6,4 +6,4 @@ const calls_1 = require("./calls");
 let account = (0, utils_1.load_account)();
 let signer = (0, utils_1.get_signer)(account);
 const txblock = new sui_js_1.TransactionBlock();
-(0, calls_1.whitelist_mint)(txblock, signer, 1).then((status) => console.log(`\n\tMint: ${status}`));
+(0, calls_1.get_wl_start)(txblock, signer).then((ms) => console.log(`\n\WL start: ${new Date(ms).toLocaleString()}`));

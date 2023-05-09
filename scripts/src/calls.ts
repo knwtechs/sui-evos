@@ -2,6 +2,7 @@ import {
   RawSigner, 
   SuiAddress, 
   TransactionBlock,
+  bcs,
   getExecutionStatusType
 } from "@mysten/sui.js";
 import { GENESIS_PACKAGE_ID, GENESIS_MODULE_NAME, MINT_TRACKER_ID } from './ids';
@@ -173,4 +174,42 @@ export async function wl_mint_left_for_account(
   if(!ret) return false;
   //console.log(ret[0]);
   return ret[0][0][0];
+}
+
+export async function get_public_start(
+  tx: TransactionBlock,
+  signer: RawSigner
+): Promise<number> {
+
+  tx.moveCall({
+    target: `${GENESIS_PACKAGE_ID}::${GENESIS_MODULE_NAME}::public_start`,
+    arguments: [tx.object(MINT_TRACKER_ID)]
+  });
+  
+  const ispx = await signer.provider.devInspectTransactionBlock({transactionBlock: tx, sender: await signer.getAddress()});
+  if(ispx.results?.length == 0) return 0;
+  let ret = ispx.results?.at(0)?.returnValues;
+  if(!ret) return 0;
+  let ms = Buffer.from(ret[0][0]);
+  let _ms = ms.readBigUInt64LE(0);
+  return Number(_ms);
+}
+
+export async function get_wl_start(
+  tx: TransactionBlock,
+  signer: RawSigner
+): Promise<number> {
+
+  tx.moveCall({
+    target: `${GENESIS_PACKAGE_ID}::${GENESIS_MODULE_NAME}::wl_start`,
+    arguments: [tx.object(MINT_TRACKER_ID)]
+  });
+  
+  const ispx = await signer.provider.devInspectTransactionBlock({transactionBlock: tx, sender: await signer.getAddress()});
+  if(ispx.results?.length == 0) return 0;
+  let ret = ispx.results?.at(0)?.returnValues;
+  if(!ret) return 0;
+  let ms = Buffer.from(ret[0][0]);
+  let _ms = ms.readBigUInt64LE(0);
+  return Number(_ms);
 }

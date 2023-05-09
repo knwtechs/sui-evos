@@ -9,7 +9,10 @@
     "public_mint": "npx tsc && node build/src/mint.js",
     "wl_mint": "npx tsc && node build/src/mint_wl_enabled.js",
     "wl_spot_left_for_account": "npx tsc && node build/src/wl_mint_left_for_account.js",
-    "is_whitelisted": "npx tsc && node build/src/is_whitelisted.js"
+    "is_whitelisted": "npx tsc && node build/src/is_whitelisted.js",
+    "get_public_start": "npx tsc && node build/src/get_public_start.js",
+    "get_wl_start": "npx tsc && node build/src/get_wl_start.js"
+
   },
   "author": "",
   "license": "ISC",

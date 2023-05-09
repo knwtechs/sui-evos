@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.wl_mint_left_for_account = exports.is_whitelisted = exports.whitelist_mint = exports.public_mint = void 0;
+exports.get_wl_start = exports.get_public_start = exports.wl_mint_left_for_account = exports.is_whitelisted = exports.whitelist_mint = exports.public_mint = void 0;
 const sui_js_1 = require("@mysten/sui.js");
 const ids_1 = require("./ids");
 const utils_1 = require("./utils");
@@ -52,7 +52,7 @@ async function public_mint(tx, signer, amount) {
     if (status == 'success') {
         console.log("SUCCESS");
     }
-    return [txn, status];
+    return status;
 }
 exports.public_mint = public_mint;
 async function whitelist_mint(tx, signer, amount) {
@@ -97,11 +97,8 @@ async function whitelist_mint(tx, signer, amount) {
         },
     });
     let status = (0, sui_js_1.getExecutionStatusType)(txn);
-    console.log(txn);
-    if (status == 'success') {
-        console.log("SUCCESS");
-    }
-    return txn;
+    //console.log(txn);
+    return status;
 }
 exports.whitelist_mint = whitelist_mint;
 async function is_whitelisted(tx, signer, account) {
@@ -144,3 +141,35 @@ async function wl_mint_left_for_account(tx, signer, account) {
     return ret[0][0][0];
 }
 exports.wl_mint_left_for_account = wl_mint_left_for_account;
+async function get_public_start(tx, signer) {
+    tx.moveCall({
+        target: `${ids_1.GENESIS_PACKAGE_ID}::${ids_1.GENESIS_MODULE_NAME}::public_start`,
+        arguments: [tx.object(ids_1.MINT_TRACKER_ID)]
+    });
+    const ispx = await signer.provider.devInspectTransactionBlock({ transactionBlock: tx, sender: await signer.getAddress() });
+    if (ispx.results?.length == 0)
+        return 0;
+    let ret = ispx.results?.at(0)?.returnValues;
+    if (!ret)
+        return 0;
+    let ms = Buffer.from(ret[0][0]);
+    let _ms = ms.readBigUInt64LE(0);
+    return Number(_ms);
+}
+exports.get_public_start = get_public_start;
+async function get_wl_start(tx, signer) {
+    tx.moveCall({
+        target: `${ids_1.GENESIS_PACKAGE_ID}::${ids_1.GENESIS_MODULE_NAME}::wl_start`,
+        arguments: [tx.object(ids_1.MINT_TRACKER_ID)]
+    });
+    const ispx = await signer.provider.devInspectTransactionBlock({ transactionBlock: tx, sender: await signer.getAddress() });
+    if (ispx.results?.length == 0)
+        return 0;
+    let ret = ispx.results?.at(0)?.returnValues;
+    if (!ret)
+        return 0;
+    let ms = Buffer.from(ret[0][0]);
+    let _ms = ms.readBigUInt64LE(0);
+    return Number(_ms);
+}
+exports.get_wl_start = get_wl_start;
