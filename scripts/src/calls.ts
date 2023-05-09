@@ -155,9 +155,10 @@ export async function is_whitelisted(
       showEvents: true
     },
   });
+
   let status = getExecutionStatusType(txn);
   if(status == 'success'){
-    console.log("SUCCESS");
+    console.log("SUCCESS: ", );
   }
 
   return txn;

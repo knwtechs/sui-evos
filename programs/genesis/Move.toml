@@ -1,7 +1,7 @@
 [package]
 name = "knw_genesis"
 version = "0.0.1"
-published-at = "0x6c6ec8508df81ff71dc58962933dc2d5edacb481278586ae4f07ce910f6210b4"
+#published-at = "0x6c6ec8508df81ff71dc58962933dc2d5edacb481278586ae4f07ce910f6210b4"
 authors = ["Ev0s", "KNW Technologies"]
 
 [dependencies]
@@ -13,7 +13,7 @@ Utils = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a
 Request = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/request"}
 
 [addresses]
-knw_genesis =  "0x6c6ec8508df81ff71dc58962933dc2d5edacb481278586ae4f07ce910f6210b4"
+knw_genesis =  "0x0"
 sui =  "0x2"
 
 #mint_Tracker = 0xa587afa8a92a1daf2742b864e1f05eafa5a5df6b162a4d3176c46548cb5a2734
