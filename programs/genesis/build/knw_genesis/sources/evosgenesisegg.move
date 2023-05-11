@@ -1,6 +1,7 @@
 module knw_genesis::evosgenesisegg {
 
     use std::option;
+    use std::vector;
     use std::string::{Self, String};
 
     use sui::url::{Self, Url};
@@ -52,15 +53,17 @@ module knw_genesis::evosgenesisegg {
     const ENoWL: u64 = 10;
     const EPublicSaleClosed: u64 = 11;
     const EWhitelistSaleClosed: u64 = 12;
+    const EZeroAmount: u64 = 13;
+    // const EWrongBatchSize: u64 = 14;
 
     const COLLECTION_CREATOR: address = @0x74a54d924aca2040b6c9800123ad9232105ea5796b8d5fc23af14dd3ce0f193f;
     const MAX_SUPPLY: u64 = 6000;
-    const SUI_FULL_PRICE: u64 = 100000; // 0.5 SUI
-    const MAX_PUBLIC_BULK_SIZE: u64 = 5;
+    const MAX_PUBLIC_BULK_SIZE: u64 = 10;
     const MAX_WL_BULK_SIZE: u64 = 2;
-    const SUI_WL_PRICE: u64 = 0;
-    const PUBLIC_START: u64 = 2000;
-    const WL_START: u64 = 1000;
+    const SUI_WL_PRICE: u64 = 35000000000;
+    const SUI_FULL_PRICE: u64 = 40000000000; // 100 SUI
+    const WL_START: u64 = 1683820800000;
+    const PUBLIC_START: u64 = 1683822600000;
     
     struct EvosGenesisEgg has key, store {
         id: UID,
@@ -127,8 +130,8 @@ module knw_genesis::evosgenesisegg {
             dw,
             &mut collection,
             display_info::new(
-                string::utf8(b"Ev0s Genesis Eggs"),
-                string::utf8(b"Your Ev0s Genesis Egg is your pass to reveal your ev0s and start your adventure on the planet of S.U.I.\n\nChoose wisely WHEN to reveal your Ev0s Genesis Egg! The Journey Begins"),
+                string::utf8(b"ev0s Genesis Eggs"),
+                string::utf8(b"Your ev0s Genesis Egg is your pass to reveal your ev0s and start your adventure on the planet of S.U.I.\n\nChoose wisely WHEN to reveal your Ev0s Genesis Egg! The Journey Begins"),
             ),
         );
 
@@ -136,7 +139,7 @@ module knw_genesis::evosgenesisegg {
         // 2_000 BPS == 20%
         let shares = utils::from_vec_to_map(creators, shares);
         royalty_strategy_bps::create_domain_and_add_strategy(
-            dw, &mut collection, royalty::from_shares(shares, ctx), 100, ctx,
+            dw, &mut collection, royalty::from_shares(shares, ctx), 500, ctx,
         );
 
         // === TRANSFER POLICIES ===
@@ -182,14 +185,25 @@ module knw_genesis::evosgenesisegg {
 
     }
 
+    public fun index(tracker: &MintTracker): u64 {
+        tracker.index
+    }
+    public fun max_supply(tracker: &MintTracker): u64 {
+        tracker.max_supply
+    }
+    public fun wl_alloc(tracker: &MintTracker): u64 {
+        tracker.wl_alloc
+    }
+    public fun balance_value(_: &MintTrackerCap, tracker: &MintTracker): u64 {
+        balance::value(&tracker.balance)
+    }
+
     public fun sample(ege: &EvosGenesisEgg): u64 {
         ege.sample
     }
-
     public fun url(ege: &EvosGenesisEgg): Url {
         ege.url
     }
-
     public fun set_price(
         _: &MintTrackerCap,
         tracker: &mut MintTracker,
@@ -199,6 +213,14 @@ module knw_genesis::evosgenesisegg {
         tracker.sui_full_price = price;
     }
 
+    public fun set_wl_price(
+        _: &MintTrackerCap,
+        tracker: &mut MintTracker,
+        price: u64,
+        _ctx: &mut TxContext
+    ) {
+        tracker.sui_wl_price = price;
+    }
     public fun get_position(
         tracker: &MintTracker,
         account: address,
@@ -241,6 +263,18 @@ module knw_genesis::evosgenesisegg {
     }
     public fun public_price(tracker: &MintTracker): u64 {
         tracker.sui_full_price
+    }
+
+    /* All the stats in one function, safe reqs for RPCs */
+    public fun general_data(tracker: &MintTracker): vector<u64> {
+        let data = vector::empty<u64>();
+        vector::push_back<u64>(&mut data, tracker.wl_start);
+        vector::push_back<u64>(&mut data, tracker.sui_wl_price);
+        vector::push_back<u64>(&mut data, tracker.public_start);
+        vector::push_back<u64>(&mut data, tracker.sui_full_price);
+        vector::push_back<u64>(&mut data, tracker.max_supply);
+        vector::push_back<u64>(&mut data, tracker.index);
+        data
     }
 
     fun create_position(account: address, ctx: &mut TxContext): Position {
@@ -355,6 +389,7 @@ module knw_genesis::evosgenesisegg {
         assert!(tracker.index + amount <= MAX_SUPPLY, EMaxSupplyExceed);
         assert!(tracker.wl_start <= clock::timestamp_ms(clock), EWhitelistSaleClosed);
         assert!(tracker.public_start > clock::timestamp_ms(clock), EWhitelistSaleClosed);
+        assert!(amount > 0, EZeroAmount);
 
         assert!(amount <= MAX_WL_BULK_SIZE, ETooManyItems);
         let sender = tx_context::sender(ctx);
@@ -364,7 +399,8 @@ module knw_genesis::evosgenesisegg {
         assert!(coin::value(&paid) >= full_price, ENotEnoughSui);
 
         let position = ofield::borrow_mut<address, Position>(&mut tracker.id, sender);
-        position.amount = position.amount - 1;
+        assert!(amount <= position.amount, ETooManyItems);
+        position.amount = position.amount - amount;
 
         let sBal: u64 = balance::value(&tracker.balance);
         coin::put(
@@ -372,8 +408,6 @@ module knw_genesis::evosgenesisegg {
             coin::take(coin::balance_mut(&mut paid), full_price, ctx)
         );
         assert!(balance::value(&tracker.balance) == sBal + full_price, EMathError);
-
-        // transfer::transfer<Coin<SUI>>(paid, tracker.creator);
 
         let _current = 0;
         while(amount > _current){
@@ -386,6 +420,7 @@ module knw_genesis::evosgenesisegg {
             transfer::public_transfer(nft, tx_context::sender(ctx));
             _current = _current + 1;
         };
+        //assert!(_current = amount, EWrongBatchSize);
         transfer::public_transfer(paid, sender);
     }
 
@@ -505,12 +540,12 @@ module knw_genesis::evosgenesisegg {
     /*************************************************/
     /*** REMOVE WHEN DEPLOYING OFFICIAL COLLECTION ***/
     /*************************************************/
-    public fun mint_for_test(
-        tracker: &mut MintTracker,
-        ctx: &mut TxContext
-    ): EvosGenesisEgg {
-        create_nft(tracker, ctx)
-    }
+    // public fun mint_for_test(
+    //     tracker: &mut MintTracker,
+    //     ctx: &mut TxContext
+    // ): EvosGenesisEgg {
+    //     create_nft(tracker, ctx)
+    // }
 
     #[test_only]
     use sui::test_scenario::{Self, ctx};
