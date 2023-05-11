@@ -22,7 +22,7 @@ export function load_account(): Ed25519Keypair {
     t = t.replace("\"", "");
     t = t.replace("]", "");
     let _t = t.split(",");
-    const raw = fromB64(_t[1]);
+    const raw = fromB64(_t[0]);
     if (raw[0] !== 0 || raw.length !== PRIVATE_KEY_SIZE + 1) {
       throw new Error('invalid key');
     }
@@ -35,7 +35,27 @@ export async function get_balance(account: SuiAddress, provider: JsonRpcProvider
 }
 
 export function get_signer(account: Keypair, connection?: Connection) {    
-    if(!connection)
-        connection = get_connection();
+    if(!connection) connection = get_connection();
     return new RawSigner(account, new JsonRpcProvider(connection));
+}
+
+export function load_addresses_from_list(path: string): string[] {
+    let file = readFileSync(path, 'utf-8');
+    return file.split(/\r?\n/).map((line) => {
+        return line.trim()
+    });
+}
+
+export function load_airdrop_list(path: string): {
+    address: string,
+    amount: number
+}[] {
+    let file = readFileSync(path, 'utf-8');
+    return file.split(/\r?\n/).map((line) => {
+        let d = line.trim().split(" ")
+        return {
+            address: d[0],
+            amount: Number(d[1])
+        }
+    });
 }

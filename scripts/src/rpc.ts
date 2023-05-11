@@ -1,6 +1,6 @@
 import { Connection } from "@mysten/sui.js";
 export const RPC_MAINNET_URLS = [
-    "https://sui-mainnet-rpc.allthatnode.com",
+    "https://sui-mainnet-rpc.allthatnode.com/",
     "https://fullnode.mainnet.sui.io:443"
 ]
 

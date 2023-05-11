@@ -1,6 +1,6 @@
 import {TransactionBlock} from "@mysten/sui.js";
-import {get_signer, load_account} from './utils';
-import {get_public_start} from './calls';
+import {get_signer, load_account} from '../utils';
+import {get_public_start} from '../calls';
 
 let account = load_account();
 let signer = get_signer(account);

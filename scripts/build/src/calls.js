@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.get_wl_start = exports.get_public_start = exports.wl_mint_left_for_account = exports.is_whitelisted = exports.whitelist_mint = exports.public_mint = void 0;
+exports.get_public_price = exports.get_wl_price = exports.get_wl_start = exports.get_public_start = exports.wl_mint_left_for_account = exports.is_whitelisted = exports.whitelist_mint = exports.wl_user = exports.presale_mint = exports.public_mint = void 0;
 const sui_js_1 = require("@mysten/sui.js");
 const ids_1 = require("./ids");
 const utils_1 = require("./utils");
@@ -55,6 +55,47 @@ async function public_mint(tx, signer, amount) {
     return status;
 }
 exports.public_mint = public_mint;
+async function presale_mint(signer, recipient, amount) {
+    const tx = new sui_js_1.TransactionBlock();
+    tx.moveCall({
+        target: `${ids_1.GENESIS_PACKAGE_ID}::${ids_1.GENESIS_MODULE_NAME}::presale_mint`,
+        arguments: [
+            tx.object(ids_1.MINT_TRACKER_CAP_ID),
+            tx.object(ids_1.MINT_TRACKER_ID),
+            tx.pure(amount),
+            tx.pure(recipient)
+        ]
+    });
+    const txn = await signer.signAndExecuteTransactionBlock({
+        transactionBlock: tx,
+        options: {
+            showEffects: true,
+            showObjectChanges: true,
+        },
+    });
+    return (0, sui_js_1.getExecutionStatusType)(txn);
+}
+exports.presale_mint = presale_mint;
+async function wl_user(signer, account) {
+    const tx = new sui_js_1.TransactionBlock();
+    tx.moveCall({
+        target: `${ids_1.GENESIS_PACKAGE_ID}::${ids_1.GENESIS_MODULE_NAME}::whitelist_user`,
+        arguments: [
+            tx.object(ids_1.MINT_TRACKER_CAP_ID),
+            tx.object(ids_1.MINT_TRACKER_ID),
+            tx.pure(account)
+        ]
+    });
+    const txn = await signer.signAndExecuteTransactionBlock({
+        transactionBlock: tx,
+        options: {
+            showEffects: true,
+            showObjectChanges: true,
+        },
+    });
+    return (0, sui_js_1.getExecutionStatusType)(txn);
+}
+exports.wl_user = wl_user;
 async function whitelist_mint(tx, signer, amount) {
     if (amount > MAX_MINT_PER_WL) {
         console.log(`You cannot buy more than ${MAX_MINT_PER_WL}`);
@@ -109,7 +150,7 @@ async function is_whitelisted(tx, signer, account) {
             tx.pure(account)
         ]
     });
-    const ispx = await signer.provider.devInspectTransactionBlock({ transactionBlock: tx, sender: account });
+    const ispx = await signer.provider.devInspectTransactionBlock({ transactionBlock: tx, sender: await signer.getAddress() });
     if (ispx.results?.length == 0)
         return false;
     let ret = ispx.results?.at(0)?.returnValues;
@@ -173,3 +214,35 @@ async function get_wl_start(tx, signer) {
     return Number(_ms);
 }
 exports.get_wl_start = get_wl_start;
+async function get_wl_price(tx, signer) {
+    tx.moveCall({
+        target: `${ids_1.GENESIS_PACKAGE_ID}::${ids_1.GENESIS_MODULE_NAME}::wl_price`,
+        arguments: [tx.object(ids_1.MINT_TRACKER_ID)]
+    });
+    const ispx = await signer.provider.devInspectTransactionBlock({ transactionBlock: tx, sender: await signer.getAddress() });
+    if (ispx.results?.length == 0)
+        return 0;
+    let ret = ispx.results?.at(0)?.returnValues;
+    if (!ret)
+        return 0;
+    let ms = Buffer.from(ret[0][0]);
+    let _ms = ms.readBigUInt64LE(0);
+    return Number(_ms);
+}
+exports.get_wl_price = get_wl_price;
+async function get_public_price(tx, signer) {
+    tx.moveCall({
+        target: `${ids_1.GENESIS_PACKAGE_ID}::${ids_1.GENESIS_MODULE_NAME}::public_price`,
+        arguments: [tx.object(ids_1.MINT_TRACKER_ID)]
+    });
+    const ispx = await signer.provider.devInspectTransactionBlock({ transactionBlock: tx, sender: await signer.getAddress() });
+    if (ispx.results?.length == 0)
+        return 0;
+    let ret = ispx.results?.at(0)?.returnValues;
+    if (!ret)
+        return 0;
+    let ms = Buffer.from(ret[0][0]);
+    let _ms = ms.readBigUInt64LE(0);
+    return Number(_ms);
+}
+exports.get_public_price = get_public_price;

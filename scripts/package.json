@@ -6,13 +6,16 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "npm run build": "npx tsc",
-    "public_mint": "npx tsc && node build/src/mint.js",
-    "wl_mint": "npx tsc && node build/src/mint_wl_enabled.js",
-    "wl_spot_left_for_account": "npx tsc && node build/src/wl_mint_left_for_account.js",
-    "is_whitelisted": "npx tsc && node build/src/is_whitelisted.js",
-    "get_public_start": "npx tsc && node build/src/get_public_start.js",
-    "get_wl_start": "npx tsc && node build/src/get_wl_start.js"
-
+    "public_mint": "npx tsc && node build/src/actions/mint.js",
+    "wl_mint": "npx tsc && node build/src/actions/mint_wl_enabled.js",
+    "wl_spot_left_for_account": "npx tsc && node build/src/actions/wl_mint_left_for_account.js",
+    "is_whitelisted": "npx tsc && node build/src/actions/is_whitelisted.js",
+    "get_public_start": "npx tsc && node build/src/actions/get_public_start.js",
+    "get_wl_start": "npx tsc && node build/src/actions/get_wl_start.js",
+    "airdrop": "npx tsc && node build/src/actions/airdrop.js",
+    "distribute_wl": "npx tsc && node build/src/actions/distribute_wl.js",
+    "prices": "npx tsc && node build/src/actions/prices.js",
+    "info": "npx tsc && node build/src/actions/infos.js"
   },
   "author": "",
   "license": "ISC",

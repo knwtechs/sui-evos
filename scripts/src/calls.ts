@@ -4,7 +4,7 @@ import {
   TransactionBlock,
   getExecutionStatusType
 } from "@mysten/sui.js";
-import { GENESIS_PACKAGE_ID, GENESIS_MODULE_NAME, MINT_TRACKER_ID } from './ids';
+import { GENESIS_PACKAGE_ID, GENESIS_MODULE_NAME, MINT_TRACKER_ID, MINT_TRACKER_CAP_ID } from './ids';
 import {get_balance} from './utils';
 
 const SUI_CLOCK_ID = "0x6";
@@ -68,6 +68,58 @@ export async function public_mint(
     console.log("SUCCESS");
   }
   return status;
+}
+
+export async function presale_mint(
+  signer: RawSigner,
+  recipient: string,
+  amount: number
+) {
+
+  const tx = new TransactionBlock();
+  tx.moveCall({
+    target: `${GENESIS_PACKAGE_ID}::${GENESIS_MODULE_NAME}::presale_mint`,
+    arguments: [
+      tx.object(MINT_TRACKER_CAP_ID),
+      tx.object(MINT_TRACKER_ID),
+      tx.pure(amount),
+      tx.pure(recipient)
+    ]
+  });
+
+  const txn = await signer.signAndExecuteTransactionBlock({
+    transactionBlock: tx,
+    options: {
+      showEffects: true,
+      showObjectChanges: true,
+    },
+  });
+  return getExecutionStatusType(txn);
+}
+
+export async function wl_user(
+  signer: RawSigner,
+  account: string
+) {
+
+  const tx = new TransactionBlock();
+  tx.moveCall({
+    target: `${GENESIS_PACKAGE_ID}::${GENESIS_MODULE_NAME}::whitelist_user`,
+    arguments: [
+      tx.object(MINT_TRACKER_CAP_ID),
+      tx.object(MINT_TRACKER_ID),
+      tx.pure(account)
+    ]
+  });
+
+  const txn = await signer.signAndExecuteTransactionBlock({
+    transactionBlock: tx,
+    options: {
+      showEffects: true,
+      showObjectChanges: true,
+    },
+  });
+  return getExecutionStatusType(txn);
 }
 
 export async function whitelist_mint(
@@ -141,7 +193,7 @@ export async function is_whitelisted(
     ]
   });
 
-  const ispx = await signer.provider.devInspectTransactionBlock({transactionBlock: tx, sender: account});
+  const ispx = await signer.provider.devInspectTransactionBlock({transactionBlock: tx, sender: await signer.getAddress()});
   if(ispx.results?.length == 0) return false;
   let ret = ispx.results?.at(0)?.returnValues;
   if(!ret) return false;
@@ -201,6 +253,44 @@ export async function get_wl_start(
 
   tx.moveCall({
     target: `${GENESIS_PACKAGE_ID}::${GENESIS_MODULE_NAME}::wl_start`,
+    arguments: [tx.object(MINT_TRACKER_ID)]
+  });
+  
+  const ispx = await signer.provider.devInspectTransactionBlock({transactionBlock: tx, sender: await signer.getAddress()});
+  if(ispx.results?.length == 0) return 0;
+  let ret = ispx.results?.at(0)?.returnValues;
+  if(!ret) return 0;
+  let ms = Buffer.from(ret[0][0]);
+  let _ms = ms.readBigUInt64LE(0);
+  return Number(_ms);
+}
+
+export async function get_wl_price(
+  tx: TransactionBlock,
+  signer: RawSigner
+): Promise<number> {
+
+  tx.moveCall({
+    target: `${GENESIS_PACKAGE_ID}::${GENESIS_MODULE_NAME}::wl_price`,
+    arguments: [tx.object(MINT_TRACKER_ID)]
+  });
+  
+  const ispx = await signer.provider.devInspectTransactionBlock({transactionBlock: tx, sender: await signer.getAddress()});
+  if(ispx.results?.length == 0) return 0;
+  let ret = ispx.results?.at(0)?.returnValues;
+  if(!ret) return 0;
+  let ms = Buffer.from(ret[0][0]);
+  let _ms = ms.readBigUInt64LE(0);
+  return Number(_ms);
+}
+
+export async function get_public_price(
+  tx: TransactionBlock,
+  signer: RawSigner
+): Promise<number> {
+
+  tx.moveCall({
+    target: `${GENESIS_PACKAGE_ID}::${GENESIS_MODULE_NAME}::public_price`,
     arguments: [tx.object(MINT_TRACKER_ID)]
   });
   
