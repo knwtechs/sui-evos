@@ -65,6 +65,7 @@ module knw_genesis::evosgenesisegg {
     const EPublicSaleClosed: u64 = 11;
     const EWhitelistSaleClosed: u64 = 12;
     const EZeroAmount: u64 = 13;
+    const ETestDisabled: u64 = 14;
     // const EWrongBatchSize: u64 = 14;
 
     const COLLECTION_CREATOR: address = @0x74a54d924aca2040b6c9800123ad9232105ea5796b8d5fc23af14dd3ce0f193f;
@@ -645,13 +646,14 @@ module knw_genesis::evosgenesisegg {
     /*************************************************/
     /*** REMOVE WHEN DEPLOYING OFFICIAL COLLECTION ***/
     /*************************************************/
-    // public fun mint_for_test(
-    //     tracker: &mut MintTracker,
-    //     ctx: &mut TxContext
-    // ): EvosGenesisEgg {
-    //     let dw = witness::from_witness(Witness {});
-    //     create_nft(dw, tracker, ctx)
-    // }
+    public fun mint_for_test(
+        tracker: &mut MintTracker,
+        ctx: &mut TxContext
+    ): EvosGenesisEgg {
+        assert!(false, ETestDisabled);
+        let dw = witness::from_witness(Witness {});
+        create_nft(dw, tracker, ctx)
+    }
     // public fun init_for_test(otw: EVOSGENESISEGG, ctx: &mut TxContext) {
     //     let sender = tx_context::sender(ctx);
 

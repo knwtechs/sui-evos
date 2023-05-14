@@ -447,6 +447,12 @@ module knw_evos::evos {
         assert!(vector::length(&incubator.evos_created) > index, 0);
         *vector::borrow(&incubator.evos_created, index)
     }
+    public fun get_slots_id(
+        incubator: &Incubator,
+        _ctx: &mut TxContext
+    ): vector<ID> {
+        incubator.slots
+    }
     public entry fun get_slot_deposit_at(
         nft_id: ID,
         incubator: &Incubator,

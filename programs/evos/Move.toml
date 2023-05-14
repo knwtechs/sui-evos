@@ -1,6 +1,7 @@
 [package]
 name = "knw_evos"
-version = "0.0.1"
+version = "0.0.2"
+published-at = "0x5de1e205fe9a9f99c07ceb768cea40389194f4c3b5e55a6228e66391e8053e4b"
 
 [dependencies]
 NftProtocol = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/nft_protocol"}
@@ -13,5 +14,10 @@ LiquidityLayerV1 = { git = "https://github.com/Origin-Byte/nft-protocol.git", re
 knw_genesis = {local = "../genesis"}
 
 [addresses]
-knw_evos =  "0x0"
+knw_evos =  "0xe22293b97873f57ee94e79d24563b11f63565559be9604a57d976b2be0dd475e"
 sui =  "0x2"
+#incubator = 0x2c29dff5aa300676a5c7650794e9587a17c9f55518d8bf2d4fa05a422746f897
+#update_cap = 0x6dfc5b33a71d45ad0ac7311b792a900c445a3e66d3ee3f49ee90c01fde51f929
+#admin_cap = 0xfe4ab4426e3baaf0ed998ee5fa2ebdce62faf17a83d13963f05d70049d36c381
+#upgrade_cap = 0xd64358e7de076acfb9fded594a2a846dfb87a76b79de914c3dd3bd8714b0b9e6
+#publisher = 0xe4d8b2386b8e06ec964f3cb952d9b29060e50f35f51d9b6fe3ce30ac5a4dbb30
