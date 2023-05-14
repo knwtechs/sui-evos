@@ -5,11 +5,13 @@ version = 0
 
 dependencies = [
   { name = "Launchpad" },
+  { name = "LiquidityLayerV1" },
   { name = "NftProtocol" },
   { name = "Permissions" },
   { name = "Pseudorandom" },
   { name = "Request" },
   { name = "Utils" },
+  { name = "knw_genesis" },
 ]
 
 [[move.package]]
@@ -60,6 +62,21 @@ dependencies = [
   { name = "Allowlist" },
   { name = "Authlist" },
   { name = "Kiosk" },
+  { name = "Permissions" },
+  { name = "Request" },
+  { name = "Sui" },
+  { name = "Utils" },
+]
+
+[[move.package]]
+name = "LiquidityLayerV1"
+source = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/liquidity_layer_v1" }
+
+dependencies = [
+  { name = "Allowlist" },
+  { name = "Authlist" },
+  { name = "Kiosk" },
+  { name = "Originmate" },
   { name = "Permissions" },
   { name = "Request" },
   { name = "Sui" },
@@ -136,4 +153,18 @@ source = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435
 dependencies = [
   { name = "Pseudorandom" },
   { name = "Sui" },
+]
+
+[[move.package]]
+name = "knw_genesis"
+source = { local = "../genesis" }
+
+dependencies = [
+  { name = "Launchpad" },
+  { name = "LiquidityLayerV1" },
+  { name = "NftProtocol" },
+  { name = "Permissions" },
+  { name = "Request" },
+  { name = "Sui" },
+  { name = "Utils" },
 ]

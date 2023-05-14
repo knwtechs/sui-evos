@@ -2,10 +2,10 @@
 compiled_package_info:
   package_name: knw_evos
   address_alias_instantiation:
-    evosgen: 96388e62a375ca869e5fc15e648398e45803628f3abfbe4f786fc9e5532c7645
     knw_evos: "0000000000000000000000000000000000000000000000000000000000000000"
-    knw_genesis: 92a626e346d34a829b83b3235c79fb9cfc5b3a55493ae24ee34f1849b7232e80
+    knw_genesis: cca18faec0dbe4b35ffc8e95308aa008c7b3eba38c2a9ddedf861b96cbc74ee2
     liquidity_layer: ae5e376b646e4d095b99e2eeaa222e40d5a6c26250419f00c4fc613a9cfb2e18
+    liquidity_layer_v1: 4e0629fa51a62b0c1d7c7b9fc89237ec5b6f630d7798ad3f06d820afb93a995a
     nft_protocol: bc3df36be17f27ac98e3c839b2589db8475fa07b20657b08e8891e3aaf5ee5f9
     ob_allowlist: 70e34fcd390b767edbddaf7573450528698188c84c5395af8c4b12e3e37622fa
     ob_authlist: 228b48911fdc05f8d80ac4334cd734d38dd7db74a0f4e423cb91f736f429ebe4
@@ -18,15 +18,15 @@ compiled_package_info:
     originmate: ed6c6fe0732be937f4379bc0b471f0f6bfbe0e8741968009e0f01e6de3d59f32
     std: "0000000000000000000000000000000000000000000000000000000000000001"
     sui: "0000000000000000000000000000000000000000000000000000000000000002"
-  source_digest: DC37311E1FBD3ED15C551751628398FFFED40DEFFE1FA4C79899EC2D05A214C0
+  source_digest: 0001AB236F29A3AB6CBC00A57BDE92FE9E6A104C117ECA0D55EE2F02D707831E
   build_flags:
-    dev_mode: true
-    test_mode: true
+    dev_mode: false
+    test_mode: false
     generate_docs: false
     generate_abis: false
     install_dir: ~
     force_recompilation: false
-    lock_file: ~
+    lock_file: "./Move.lock"
     additional_named_addresses: {}
     architecture: ~
     fetch_deps_only: false
@@ -37,6 +37,7 @@ dependencies:
   - Kiosk
   - Launchpad
   - LiquidityLayer
+  - LiquidityLayerV1
   - MoveStdlib
   - NftProtocol
   - Originmate

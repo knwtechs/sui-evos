@@ -5,7 +5,7 @@ import {is_whitelisted} from '../calls';
 let account = load_account();
 let signer = get_signer(account);
 const txblock = new TransactionBlock();
-let check = "0x64e213419792a92dd2cc557a0e453f337a6b4d77385a0a1ea6fcdd579eded4ab";
+let check = "0x987dc7c35eec73687927a4a1f695db73e05a84ae6842e8ed19a320648e1e89a4";
 
 is_whitelisted(
   txblock,

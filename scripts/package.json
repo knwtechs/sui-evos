@@ -12,10 +12,13 @@
     "is_whitelisted": "npx tsc && node build/src/actions/is_whitelisted.js",
     "get_public_start": "npx tsc && node build/src/actions/get_public_start.js",
     "get_wl_start": "npx tsc && node build/src/actions/get_wl_start.js",
+    "wl-check": "npx tsc && node build/src/actions/wl_check.js",
     "airdrop": "npx tsc && node build/src/actions/airdrop.js",
+    "boost": "npx tsc && node build/src/actions/mint_boost.js",
     "distribute_wl": "npx tsc && node build/src/actions/distribute_wl.js",
     "prices": "npx tsc && node build/src/actions/prices.js",
-    "info": "npx tsc && node build/src/actions/infos.js"
+    "info": "npx tsc && node build/src/actions/infos.js",
+    "collect-from-secondary": "npx tsc && node build/src/actions/royalties/collect.js"
   },
   "author": "",
   "license": "ISC",
