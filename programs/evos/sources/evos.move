@@ -405,6 +405,24 @@ module knw_evos::evos {
     public fun owner(slot: &Slot): address {
         slot.owner
     }
+    // public fun slot_owner(
+    //     incubator: &Incubator,
+    //     slot_id: ID
+    // ): address {
+    //     owner(ofield::borrow(&incubator.id, slot_id))
+    // }
+    // public fun slot_revealable_at(
+    //     incubator: &Incubator,
+    //     slot_id: ID
+    // ): address {
+    //     revealable_at(ofield::borrow(&incubator.id, slot_id))
+    // }
+    // public fun slot_deposit_at(
+    //     incubator: &Incubator,
+    //     slot_id: ID
+    // ): address {
+    //     deposit_at(ofield::borrow(&incubator.id, slot_id))
+    // }
     public fun name(specie: &Specie): String {
         specie.name
     }
@@ -735,7 +753,7 @@ module knw_evos::evos {
     const CREATOR: address = @0xA1C04;
     #[test_only]
     const CLOCK: address = @0x6;
-    
+
     #[test_only]
     fun create_clock(ctx: &mut TxContext) {
         let clock = clock::create_for_testing(ctx);
@@ -1277,5 +1295,43 @@ module knw_evos::evos {
         test_scenario::next_tx(&mut scenario, CREATOR);
         test_scenario::end(scenario);
     }
+
+    // #[test]
+    // fun test_slot(){
+
+    //     let scenario = test_scenario::begin(CREATOR);
+    //     create_clock(ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     init(EVOS {}, ctx(&mut scenario));
+    //     evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let tracker = test_scenario::take_shared<MintTracker>(&scenario);
+    //     mint_egg_to_recipient(&mut tracker, CREATOR, ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::return_shared(tracker);
+
+    //     let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
+    //     let clock = test_scenario::take_shared<Clock>(&scenario);
+    //     let egg = test_scenario::take_from_address<EvosGenesisEgg>(
+    //         &scenario,
+    //         CREATOR,
+    //     );
+
+    //     deposit(
+    //         &mut incubator,
+    //         egg,
+    //         &clock,
+    //         ctx(&mut scenario)
+    //     );
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+        
+    //     assert!(vector::length(&incubator.slots) == 1, 10);
+    //     test_scenario::return_shared(incubator);
+    //     test_scenario::return_shared(clock);
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::end(scenario);
+    // }
 
 }
