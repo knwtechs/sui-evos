@@ -1,7 +1,8 @@
 [package]
 name = "knw_evos"
 version = "0.0.2"
-published-at = "0x5de1e205fe9a9f99c07ceb768cea40389194f4c3b5e55a6228e66391e8053e4b"
+#test-published-at = "0x5de1e205fe9a9f99c07ceb768cea40389194f4c3b5e55a6228e66391e8053e4b"
+published-at = "0x49ce9593e850d374d4b7fc6813312760aee0d4e7816b9e082efc7563bca96e94"
 
 [dependencies]
 NftProtocol = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/nft_protocol"}
@@ -14,8 +15,23 @@ LiquidityLayerV1 = { git = "https://github.com/Origin-Byte/nft-protocol.git", re
 knw_genesis = {local = "../genesis"}
 
 [addresses]
-knw_evos =  "0xe22293b97873f57ee94e79d24563b11f63565559be9604a57d976b2be0dd475e"
+#test_knw_evos =  "0xe22293b97873f57ee94e79d24563b11f63565559be9604a57d976b2be0dd475e"
+#knw_evos = "0x169664f0f62bec3d59bb621d84df69927b3377a1f32ff16c862d28c158480065"
+knw_evos = "0x169664f0f62bec3d59bb621d84df69927b3377a1f32ff16c862d28c158480065"
 sui =  "0x2"
+
+#incubator = 0xdf00da22904f8edb76cd854737d6ab9477b64f0ee8d4972fcc23a7077e135ae7
+#admin_cap = 0x0862e1b7b406b8cf3b4792da3ed9766d325b3d4cd5e99ace4892c48cbebbca3f
+#upgrade_cap = 0x6fd3091179934600baa53add3a1ffce3f555b38e4fe2f434da4191fb161234b0
+#publisher = 0xa8177796bc4b06e084328e943541a393895ec47e988ed51e68278c665c61f6b4
+#transfer_policy = 0x19a5dbd42169bd2f693c01998a1fc0ed92801d9c3bc2a88514bb45474a644314
+#transfer_policy_cap = 0x954993882ee6863c602f78781baeda5e29d30c339b8c8aa5dc2d4cdd12e78c46
+#royalty_strategy_bps = 0xba47fd986c197ce4f2f3ecd73539ace7ea3f7144c22e7ccb36e63c28343b5f2b
+#collection = 0xf9fab4c3907b0de3db33c8fd1bc441130f88f42d4fe087805c397bf4ff2b7a6f
+#orderbook = 0xa792f3aa9e7301429e72fa19b19fa307b9a12dc27882d300032300a3a2653c71
+#tx_id = D5bDPT5BpdVkiC8kg46VN9iRxd2rW2N2accY4EqAup4J
+
+### test_knw_evos
 #incubator = 0x2c29dff5aa300676a5c7650794e9587a17c9f55518d8bf2d4fa05a422746f897
 #update_cap = 0x6dfc5b33a71d45ad0ac7311b792a900c445a3e66d3ee3f49ee90c01fde51f929
 #admin_cap = 0xfe4ab4426e3baaf0ed998ee5fa2ebdce62faf17a83d13963f05d70049d36c381
