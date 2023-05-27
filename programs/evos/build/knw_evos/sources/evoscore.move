@@ -46,7 +46,9 @@ module knw_evos::evoscore {
         xp_per_frame: u64,
         xp_timeframe: u64,
         xp_var_factor: u64,
-        stages: vector<Stage>
+        stages: vector<Stage>,
+        max_gems: u32,
+        max_xp: u32
     }
 
     // Keeps track of gems emission rate, supply emitted & burned
@@ -96,6 +98,8 @@ module knw_evos::evoscore {
     const DEFAULT_XP_PER_FRAME: u64 = 1;
     const DEFAULT_XP_VAR_FAC: u64 = 115;
     const GEMSXP_RATE: u32 = 2;
+    const DEFAULT_MAX_GEMS: u32 = 960;
+    const DEFAULT_MAX_XP: u32 = 240;
 
     // Errors Code
     const EStageNotFound: u64 = 0;
@@ -116,6 +120,7 @@ module knw_evos::evoscore {
     const EHasReceiptPending: u64 = 15;
     const ENotPendingReceipts: u64 = 16;
     const EUserNotExists: u64 = 17;
+    const EBoundToLow: u64 = 18;
 
     fun init(otw: EVOSCORE, ctx: &mut TxContext) {
 
@@ -149,7 +154,9 @@ module knw_evos::evoscore {
             DEFAULT_XP_PER_FRAME, // xp per frame
             DEFAULT_XP_TIME_FRAME, // frame
             DEFAULT_XP_VAR_FAC,
-            stages
+            stages,
+            DEFAULT_MAX_GEMS,
+            DEFAULT_MAX_XP
         );
 
         // Game
@@ -183,8 +190,10 @@ module knw_evos::evoscore {
         xp_timeframe: u64,
         xp_var_factor: u64,
         stages: vector<Stage>,
+        max_gems: u32,
+        max_xp: u32
     ): GameSettings {
-        GameSettings{ gems_mine, xp_per_frame, xp_timeframe, xp_var_factor, stages }
+        GameSettings{ gems_mine, xp_per_frame, xp_timeframe, xp_var_factor, stages, max_gems, max_xp }
     }
     fun create_gems_mine(
         gems_per_frame: u64,
@@ -284,15 +293,6 @@ module knw_evos::evoscore {
     fun settings_mut(game: &mut EvosGame): &mut GameSettings {
         &mut game.settings
     }
-    fun set_xp_per_frame_from_game(game: &mut EvosGame, value: u64) {
-        set_xp_per_frame(&mut game.settings, value)
-    }
-    fun set_xp_frame_from_game(game: &mut EvosGame, value: u64) {
-        set_xp_frame(&mut game.settings, value)
-    }
-    fun set_gems_frame_from_game(game: &mut EvosGame, value: u64) {
-        set_gems_frame(gems_mine_mut(game), value)
-    }
 
     // Settings
     public fun gems_mine(settings: &GameSettings): &GemsMine {
@@ -323,6 +323,12 @@ module knw_evos::evoscore {
     public fun xp_var_fac(settings: &GameSettings): u64 {
         settings.xp_var_factor
     }
+    public fun max_gems(settings: &GameSettings): u32 {
+        settings.max_gems
+    }
+    public fun max_xp(settings: &GameSettings): u32 {
+        settings.max_xp
+    }
     fun set_xp_frame(settings: &mut GameSettings, value: u64) {
         settings.xp_timeframe = value
     }
@@ -337,6 +343,14 @@ module knw_evos::evoscore {
     }
     fun set_gems_frame_from_settings(settings: &mut GameSettings, value: u64) {
         set_gems_frame(&mut settings.gems_mine, value)
+    }
+    fun set_max_gems(settings: &mut GameSettings, value: u32) {
+        // assert!(value > settings.max_gems, EBoundToLow);
+        settings.max_gems = value;
+    }
+    fun set_max_xp(settings: &mut GameSettings, value: u32) {
+        // assert!(value > settings.max_xp, EBoundToLow);
+        settings.max_xp = value;
     }
     // Settings | Accessors
     fun add_stage_(
@@ -424,9 +438,21 @@ module knw_evos::evoscore {
         };
     }
 
-    // TraitsSettings
-
-    public entry fun create_traitbox(
+    // ==== GameAdminCap Only ====
+    public entry fun add_stage(
+        _: &GameAdminCap,
+        game: &mut EvosGame,
+        name: vector<u8>,
+        base: u32,
+        levels: u32,
+        rewards: vector<u32>,
+        _ctx: &mut TxContext
+    ) {
+        let stage = create_stage(name, base, levels, rewards);
+        vector::push_back<Stage>(&mut settings_mut(game).stages, stage);
+    }
+    public entry fun add_new_traitbox(
+        _: &GameAdminCap,
         game: &mut EvosGame,
         level: u32,
         stage: vector<u8>,
@@ -442,20 +468,31 @@ module knw_evos::evoscore {
         let box = traits::new_trait_box(traits::new_box_index(settings), level, stage, names, values, urls, weights, price);
         traits::register_box(settings, box);
     }
-
-    // ==== AdminOnly ====
-    public fun add_stage(
-        _: &GameAdminCap,
-        game: &mut EvosGame,
-        name: vector<u8>,
-        base: u32,
-        levels: u32,
-        rewards: vector<u32>,
-        _ctx: &mut TxContext
-    ) {
-        let stage = create_stage(name, base, levels, rewards);
-        vector::push_back<Stage>(&mut settings_mut(game).stages, stage);
+    public entry fun set_xp_var_fac_from_game(_: &GameAdminCap, game: &mut EvosGame, value: u64) {
+        set_xp_var_fac(settings_mut(game), value)
     }
+    public entry fun set_xp_per_frame_from_game(_: &GameAdminCap, game: &mut EvosGame, value: u64) {
+        set_xp_per_frame(settings_mut(game), value)
+    }
+    public entry fun set_xp_frame_from_game(_: &GameAdminCap, game: &mut EvosGame, value: u64) {
+        set_xp_frame(settings_mut(game), value)
+    }
+    public entry fun set_gems_frame_from_game(_: &GameAdminCap, game: &mut EvosGame, value: u64) {
+        set_gems_frame(gems_mine_mut(game), value)
+    }
+    public entry fun set_gems_per_frame_from_game(_: &GameAdminCap, game: &mut EvosGame, value: u64) {
+        set_gems_per_frame(gems_mine_mut(game), value)
+    }
+    public entry fun set_max_gems_from_game(_: &GameAdminCap, game: &mut EvosGame, value: u32) {
+        assert!(value > settings(game).max_gems, EBoundToLow);
+        set_max_gems(settings_mut(game), value);
+    }
+    public entry fun set_max_xp_from_game(_: &GameAdminCap, game: &mut EvosGame, value: u32) {
+        assert!(value > settings(game).max_xp, EBoundToLow);
+        set_max_xp(settings_mut(game), value);
+    }
+
+    // ==== For Users ====
 
     // Delegate the transfer right on the kiosk to the game object only.
     // The user can undelegate whenever he prefers.
@@ -536,7 +573,7 @@ module knw_evos::evoscore {
         game.delegations = game.delegations-1;
     }
 
-    // Upgrade Stage
+        // Upgrade Stage
     // It upgrades [uri, stage]
     public entry fun to_next_stage(
         game: &mut EvosGame,
@@ -592,60 +629,7 @@ module knw_evos::evoscore {
         lock_nft(game, kiosk, nft_id, ctx);
     }
 
-    // Upgrade Level
-    // It upgrades [level]
-    // public entry fun to_next_level(
-    //     game: &mut EvosGame,
-    //     user_info: &mut UserInfo,
-    //     kiosk: &mut sui::kiosk::Kiosk,
-    //     nft_id: ID,
-    //     policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::withdraw_request::WITHDRAW_REQ>>, 
-    //     clock: &Clock,
-    //     ctx: &mut TxContext
-    // ) {
-    //     let sender: address = tx_context::sender(ctx);
-    //     assert!(dof::exists_(&game.id, sender), ENoDelegationsFound);
-
-    //     // Retrieve UserInfo
-    //     assert!(dof::exists_(&user_info.id, nft_id), EItemNotFound);
-
-    //     // Get the UserSlot for this Ev0s
-    //     let slot: &mut UserSlot = dof::borrow_mut(&mut user_info.id, nft_id);        
-
-    //     // Get nft from kiosk
-    //     let nft: Evos = withdraw_evos(kiosk, nft_id, policy, ctx);
-    //     let now: u64 = clock::timestamp_ms(clock);
-
-    //     sync_delegated(game, &mut nft, slot, now, ctx);
-
-    //     // Get nft attributes
-    //     let stage: String = evos::stage(&nft);
-    //     let xp: u32 = evos::xp(&nft);
-    //     let level: u32 = evos::level(&nft);
-
-    //     let stages = stages(settings(game));
-    //     let stage_index: u64 = get_stage_index(stages, &stage);
-    //     let current_stage: &Stage = vector::borrow(stages, stage_index);
-    //     assert!(current_stage.levels < level, EMaxLevelForStage);
-
-    //     let next_level_xp = current_stage.base;
-
-    //     let i: u32 = 1;
-    //     while(i <= level){
-    //         next_level_xp = calc_xp_for_next_level(next_level_xp);
-    //         i = i+1;
-    //     };
-        
-    //     // Asserts for upgrade level requirements
-    //     assert!(xp >= next_level_xp, EInsufficientXp);
-
-    //     // Update Ev0s
-    //     evos::set_level(&mut nft, level + 1, ctx);
-
-    //     deposit_evos(kiosk, nft, ctx);
-    //     lock_nft(game, kiosk, nft_id, ctx);
-    // }
-
+    // Pick a random Trait from the box and apply it to the Ev0s.
     public entry fun open_box(
         game: &mut EvosGame,
         settings: &TraitSettings,
@@ -681,6 +665,7 @@ module knw_evos::evoscore {
         lock_nft(game, kiosk, nft_id, ctx);
     }
 
+    // GameThreadCap Only
     public entry fun confirm_box_receipt(
         _: &GameThreadCap,
         game: &mut EvosGame,
@@ -710,19 +695,77 @@ module knw_evos::evoscore {
         traits::burn_receipt(receipt);
     }
 
-    public fun openable_trait_boxes(
+/*
+    // Upgrade Ev0s level | DEPRECATED
+    public entry fun to_next_level(
+        game: &mut EvosGame,
+        user_info: &mut UserInfo,
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::withdraw_request::WITHDRAW_REQ>>, 
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        let sender: address = tx_context::sender(ctx);
+        assert!(dof::exists_(&game.id, sender), ENoDelegationsFound);
+
+        // Retrieve UserInfo
+        assert!(dof::exists_(&user_info.id, nft_id), EItemNotFound);
+
+        // Get the UserSlot for this Ev0s
+        let slot: &mut UserSlot = dof::borrow_mut(&mut user_info.id, nft_id);        
+
+        // Get nft from kiosk
+        let nft: Evos = withdraw_evos(kiosk, nft_id, policy, ctx);
+        let now: u64 = clock::timestamp_ms(clock);
+
+        sync_delegated(game, &mut nft, slot, now, ctx);
+
+        // Get nft attributes
+        let stage: String = evos::stage(&nft);
+        let xp: u32 = evos::xp(&nft);
+        let level: u32 = evos::level(&nft);
+
+        let stages = stages(settings(game));
+        let stage_index: u64 = get_stage_index(stages, &stage);
+        let current_stage: &Stage = vector::borrow(stages, stage_index);
+        assert!(current_stage.levels < level, EMaxLevelForStage);
+
+        let next_level_xp = current_stage.base;
+
+        let i: u32 = 1;
+        while(i <= level){
+            next_level_xp = calc_xp_for_next_level(next_level_xp);
+            i = i+1;
+        };
+        
+        // Asserts for upgrade level requirements
+        assert!(xp >= next_level_xp, EInsufficientXp);
+
+        // Update Ev0s
+        evos::set_level(&mut nft, level + 1, ctx);
+
+        deposit_evos(kiosk, nft, ctx);
+        lock_nft(game, kiosk, nft_id, ctx);
+    }
+*/
+
+
+    // get a box that user can open if present 
+    public fun find_eligible_trait_box(
         history: &EvosHistory,
         nft_id: ID,
         settings: &TraitSettings,
         _ctx: &mut TxContext
-    ): vector<u16> {
-        let r = vector::empty<u16>();
+    ): std::option::Option<u16> {
+        let r: std::option::Option<u16> = std::option::none();
         let boxes = traits::trait_boxes(settings);
         let i: u64 = 0;
         while(i < vector::length(boxes)){
             let b = vector::borrow(boxes, i);
             if(!history::box_already_open(history, nft_id, traits::traitbox_index(b))){
-                vector::push_back(&mut r, traits::traitbox_index(b));
+                std::option::fill(&mut r, traits::traitbox_index(b));
+                break
             };
             i = i+1;
         };
@@ -815,7 +858,12 @@ module knw_evos::evoscore {
         deposit_evos(kiosk, evos, ctx);
         slot.last_thread_check = now;
     }
-    // public fun on_delegated_evos(){}
+
+    // NOTE: public fun on_delegated_evos(){}
+
+    // ==== PRIVATE ====
+    
+    // Sync
     fun sync_delegated(
         game: &mut EvosGame,
         nft: &mut Evos,
@@ -825,17 +873,35 @@ module knw_evos::evoscore {
     ) {
         let (gems_frame, gems_rate) = gems_info_from_game(game);
         let (xp_frame, xp_rate) = xp_info_from_game(game);
+        let max_gems = max_gems(settings(game));
+        let max_xp = max_xp(settings(game));
+
+        let xp: u32 = evos::xp(nft);
+        let gems: u32 = evos::gems(nft);
 
         // Get earned xp that isn't claimed yet
-        let uxp: u32 = xp_earned_since_last_update(xp_rate, xp_frame, slot.last_claim_xp, now);
-        if(uxp > 0){
-            add_xp(nft, uxp, ctx);
-            slot.last_claim_xp = now;
+        if(xp < max_gems(settings(game))){
+            let uxp: u32 = xp_earned_since_last_update(xp_rate, xp_frame, slot.last_claim_xp, now);
+            if(uxp > 0){
+                if(uxp <= (max_xp - xp)){
+                    add_xp(nft, uxp, ctx);
+                }else{
+                    add_xp(nft, max_xp - xp, ctx);
+                };
+
+                slot.last_claim_xp = now;
+            };
         };
-        let ugems: u32 = gems_earned_since_last_update(gems_rate, gems_frame, slot.last_claim_gems, now);
-        if(ugems > 0){
-            add_gems(game, nft, ugems, ctx);
-            slot.last_claim_gems = now;
+        if(evos::gems(nft) < max_gems(settings(game))){
+            let ugems: u32 = gems_earned_since_last_update(gems_rate, gems_frame, slot.last_claim_gems, now);
+            if(ugems > 0){
+                if(ugems <= (max_gems - gems)){
+                    add_gems(game, nft, ugems, ctx);
+                }else{
+                    add_gems(game, nft, max_gems - gems, ctx);
+                };
+                slot.last_claim_gems = now;
+            };
         };
 
         // Get nft attributes
@@ -889,6 +955,7 @@ module knw_evos::evoscore {
         slot.last_claim_gems = now;
     }
 
+    // EvosHistory
     fun init_history_for_evos(
         game: &mut EvosGame,
         nft_id: ID,
@@ -898,6 +965,7 @@ module knw_evos::evoscore {
         dof::add(&mut game.id, nft_id, history);
     }
 
+    // Kiosk related
     fun withdraw_evos( 
         kiosk: &mut sui::kiosk::Kiosk, 
         nft_id: ID, 
@@ -912,7 +980,6 @@ module knw_evos::evoscore {
     fun deposit_evos( 
         kiosk: &mut sui::kiosk::Kiosk, 
         nft: Evos, 
-        //policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::withdraw_request::WITHDRAW_REQ>>, 
         ctx: &mut TxContext, 
     ) { 
         ob_kiosk::ob_kiosk::deposit<Evos>(kiosk, nft, ctx)
@@ -933,7 +1000,7 @@ module knw_evos::evoscore {
         ob_kiosk::remove_auth_transfer(kiosk, nft_id, &game.id);
     }
 
-    // ==== HELPERS ====
+    // ==== XP, Gems & Stage related ====
     fun calc_xp_for_next_level(prev: u32): u32 {
         let fixed: u32 = 39;
         let variable: u32 = 115; // to div by 100
@@ -954,8 +1021,6 @@ module knw_evos::evoscore {
         last_claim: u64,
         now: u64
     ): u32 {
-        // let rate: u64 = gems_per_frame_from_game(game);
-        // let frame: u64 = gems_frame_from_game(game);
         let elapsed: u64 = now - last_claim;
         if(elapsed > frame){
             let earnings: u64 = ((elapsed - (elapsed % frame)) / frame) * rate;
@@ -1017,8 +1082,6 @@ module knw_evos::evoscore {
         };
         i
     }
-
-    // ==== PRIVATE ====
     fun add_gems(
         game: &mut EvosGame,
         evos: &mut Evos,
@@ -1260,4 +1323,27 @@ module knw_evos::evoscore {
         test_scenario::next_tx(&mut scenario, CREATOR);
         test_scenario::end(scenario);
     }
+
+    // #[test]
+    // fun core_lock_evos_works_correctly(){}
+
+    // #[test]
+    // fun core_unlock_evos_works_correctly(){}
+
+    // #[test]
+    // fun core_sync_delegated_works_correctly(){}
+
+    // #[test]
+    // fun core_upgrade_to_next_stage_works_correctly(){}
+
+    // #[test]
+    // fun core_on_undelegated_evos_works_correctly(){}
+
+    // #[test]
+    // fun core_sync_delegated_works_correctly(){}
+
+    // TODO: test history_
+    // TODO: test boxes_
+    // TODO: test 
+    
 }
