@@ -102,10 +102,6 @@ module knw_evos::traits {
         Trait {name, value, url, weight}
     }
 
-    public(friend) fun empty_traits(): vector<Trait> {
-        vector::empty<Trait>()
-    }
-
     // Trait Settings
     public(friend) fun trait_boxes(settings: &TraitSettings): &vector<TraitBox> {
         &settings.boxes
@@ -237,5 +233,9 @@ module knw_evos::traits {
         let BoxReceipt {id, nft_id: _, trait: _, prev_url: _, confirmed: _} = receipt;
         object::delete(id);
     }
-    
+
+    // Mist
+    public(friend) fun empty_traits(): vector<Trait> {
+        vector::empty<Trait>()
+    } 
 }
