@@ -1,10 +1,9 @@
 /* Author: kunnow
  * Company: KNW Technologies FZCO
  * License: MIT
- * Module details:
- *  Description: Utilities.
- *  Features:
- *          - Get a random number in [0, bound);
+ * Description: Utilities.
+ * Features:
+ *      - Get a random number in [0, bound);
  */
 module knw_evos::utils {
 

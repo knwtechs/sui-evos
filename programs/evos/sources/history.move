@@ -1,14 +1,13 @@
 /* Author: kunnow
  * Company: KNW Technologies FZCO
  * License: MIT
- * Module details:
- *  Description: History for evoscore dynamics.
- *  Features:
- *          - Create a new EvosHistory object
- *          - Push & Pop a State from the History
- *          - Push & Pop an open box from the History
- *          - Check if a box has already been opened for an NFT
- *          - Get all the opened boxes for an NFT
+ * Description: History for evoscore dynamics.
+ * Features:
+ *      - Create a new EvosHistory object
+ *      - Push & Pop a State from the History
+ *      - Push & Pop an open box from the History
+ *      - Check if a box has already been opened for an NFT
+ *      - Get all the opened boxes for an NFT
  */
 module knw_evos::history {
     

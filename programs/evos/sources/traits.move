@@ -1,14 +1,13 @@
 /* Author: kunnow
  * Company: KNW Technologies FZCO
  * License: MIT
- * Module details:
- *  Description: TraitsBox management module.
- *  Features:
- *          - Create a new TraitSettings object
- *          - Create a new TraitBox object
- *          - Create & Confirm BoxReceipts
- *          - Get a TraitBox by box index
- *          - Get all TraitBox for a given `Stage` name
+ * Description: TraitsBox management module.
+ * Features:
+ *      - Create a new TraitSettings object
+ *      - Create a new TraitBox object
+ *      - Create & Confirm BoxReceipts
+ *      - Get a TraitBox by box index
+ *      - Get all TraitBox for a given `Stage` name
  */
 module knw_evos::traits {
 

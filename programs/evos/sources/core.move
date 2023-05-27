@@ -1,10 +1,9 @@
 /* Author: kunnow
  * Company: KNW Technologies FZCO
  * License: MIT
- * Module details:
- *  Description: All game logic such as devolution and evolution mechs are handled by this module.
- *  Features:
- *          - (GameAdminCap) Create a new `Stage`
+ * Description: All game logic such as devolution and evolution mechs are handled by this module.
+ * Features:
+ *      - (GameAdminCap) Create a new `Stage`
  */
 module knw_evos::evoscore {
 
@@ -24,9 +23,6 @@ module knw_evos::evoscore {
     use sui::tx_context::{Self, TxContext};
 
     use ob_kiosk::ob_kiosk;
-    //use ob_permissions::witness;
-    //use ob_request::request;
-    //use ob_request::borrow_request;
 
     struct Witness has drop {}
     struct EVOSCORE has drop {}
@@ -695,60 +691,7 @@ module knw_evos::evoscore {
         traits::burn_receipt(receipt);
     }
 
-/*
-    // Upgrade Ev0s level | DEPRECATED
-    public entry fun to_next_level(
-        game: &mut EvosGame,
-        user_info: &mut UserInfo,
-        kiosk: &mut sui::kiosk::Kiosk,
-        nft_id: ID,
-        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::withdraw_request::WITHDRAW_REQ>>, 
-        clock: &Clock,
-        ctx: &mut TxContext
-    ) {
-        let sender: address = tx_context::sender(ctx);
-        assert!(dof::exists_(&game.id, sender), ENoDelegationsFound);
 
-        // Retrieve UserInfo
-        assert!(dof::exists_(&user_info.id, nft_id), EItemNotFound);
-
-        // Get the UserSlot for this Ev0s
-        let slot: &mut UserSlot = dof::borrow_mut(&mut user_info.id, nft_id);        
-
-        // Get nft from kiosk
-        let nft: Evos = withdraw_evos(kiosk, nft_id, policy, ctx);
-        let now: u64 = clock::timestamp_ms(clock);
-
-        sync_delegated(game, &mut nft, slot, now, ctx);
-
-        // Get nft attributes
-        let stage: String = evos::stage(&nft);
-        let xp: u32 = evos::xp(&nft);
-        let level: u32 = evos::level(&nft);
-
-        let stages = stages(settings(game));
-        let stage_index: u64 = get_stage_index(stages, &stage);
-        let current_stage: &Stage = vector::borrow(stages, stage_index);
-        assert!(current_stage.levels < level, EMaxLevelForStage);
-
-        let next_level_xp = current_stage.base;
-
-        let i: u32 = 1;
-        while(i <= level){
-            next_level_xp = calc_xp_for_next_level(next_level_xp);
-            i = i+1;
-        };
-        
-        // Asserts for upgrade level requirements
-        assert!(xp >= next_level_xp, EInsufficientXp);
-
-        // Update Ev0s
-        evos::set_level(&mut nft, level + 1, ctx);
-
-        deposit_evos(kiosk, nft, ctx);
-        lock_nft(game, kiosk, nft_id, ctx);
-    }
-*/
 
 
     // get a box that user can open if present 
