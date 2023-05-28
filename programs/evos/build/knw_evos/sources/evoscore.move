@@ -122,6 +122,7 @@ module knw_evos::evoscore {
     const ENotPendingReceipts: u64 = 16;
     const EUserNotExists: u64 = 17;
     const EBoundToLow: u64 = 18;
+    const EPrevStageNotFound: u64 = 19;
 
     fun init(otw: EVOSCORE, ctx: &mut TxContext) {
 
@@ -603,6 +604,8 @@ module knw_evos::evoscore {
 
         // Update EvosGame
         game.delegations = game.delegations-1;
+
+        history::register_devolution_check_for_id(dof::borrow_mut(&mut game.id, nft_id), nft_id, clock::timestamp_ms(clock));
     }
 
         // Upgrade Stage
@@ -657,6 +660,8 @@ module knw_evos::evoscore {
 
         deposit_evos(kiosk, nft, ctx);
         lock_nft(game, kiosk, nft_id, ctx);
+
+        history::push_state(dof::borrow_mut(&mut game.id, nft_id), nft_id, sui::url::new_unsafe_from_bytes(b"test"), std::ascii::string(b""), std::ascii::string(b""));
     }
 
     // Pick a random Trait from the box and apply it to the Ev0s.
@@ -763,22 +768,26 @@ module knw_evos::evoscore {
         let now: u64 = clock::timestamp_ms(clock);
         let evos = withdraw_evos(kiosk, nft_id, policy, ctx);
 
+        // if(string::length(&evos::stage(&evos)) == 4){
+        //     std::debug::print(&evos::xp(&evos));
+        // };
         sync_undelegated(
             game,
             &mut evos,
             nft_id,
-            // tx_context::sender(ctx),
             now,
             ctx
         );
+        // if(string::length(&evos::stage(&evos)) == 4){
+        //     std::debug::print(&evos::xp(&evos));
+        // };
 
         let xp = evos::xp(&evos);
         let stage = evos::stage(&evos);
         let level = evos::level(&evos);
-
+        
         let stage_index: u64 = get_stage_index(stages(settings(game)), &stage);
-        assert!((stage_index + 1) < vector::length(stages(settings(game))), ENextStageNotFound);
-
+        assert!(stage_index < vector::length(stages(settings(game))), EPrevStageNotFound);
 
         // here we need to understand if we need to downgrade the stage or only the level. 
         if(xp < calc_xp_for_level(vector::borrow(stages(settings(game)), stage_index).base, level)){
@@ -790,7 +799,7 @@ module knw_evos::evoscore {
                 
                 // let history = dof::borrow_mut<ID, EvosHistory>(&mut game.id, nft_id);
                 let stage_level_xp: u32 = calc_xp_for_level(current_stage.base, level);
-                while(xp <= stage_level_xp && level > 0) {
+                while(xp <= stage_level_xp && level > 1) {
                     let j: u64 = vector::length(&opened_boxes);
                     while(j > 0){
                         let box_index = *vector::borrow(&opened_boxes, j);
@@ -809,12 +818,13 @@ module knw_evos::evoscore {
                     evos::set_level(&mut evos, level, ctx);
                 };
 
-                if(level > 0){
+                if(level > 1){
                     break
                 };
                 
                 let (url, _ , _) = history::pop_state(dof::borrow_mut<ID, EvosHistory>(&mut game.id, nft_id), nft_id);
-                
+                current_stage = vector::borrow(&game.settings.stages, stage_index - 1);
+
                 evos::set_stage(
                     &mut evos,
                     *string::bytes(&current_stage.name),
@@ -822,7 +832,6 @@ module knw_evos::evoscore {
                     ctx
                 );
 
-                current_stage = vector::borrow(&game.settings.stages, stage_index - 1);
                 stage_index = stage_index - 1;
             };
         };
@@ -937,18 +946,31 @@ module knw_evos::evoscore {
         let xp = evos::xp(nft);
 
         let last_check = history::last_devolution_check_for_id(dof::borrow_mut<ID, EvosHistory>(&mut game.id, nft_id), nft_id);
+        if(last_check == 0){
+            last_check = now;
+        };
         let amount = 0;
-
+        let chxp = true;
         if(gems > 0){
             let ugems: u32 = gems_lost_since_last_update(gems_rate * gems_dec_k, gems_frame, last_check, now);
+            // std::debug::print(&evos::gems(nft));
+            // std::debug::print(&ugems);
             if(gems > ugems){
                 amount = ugems;
+                chxp = false;
                 //sub_gems(game, nft, ugems, ctx);
             }else{
                 amount = gems;
+                if(gems == ugems){
+                    chxp = false;
+                };
             };
-        }else if(xp > 0){
+        };
+        if(xp > 0 && chxp){
+            // std::debug::print(&evos::xp(nft));
             let uxp: u32 = xp_lost_since_last_update(xp_rate * xp_dec_k, xp_frame, last_check, now);
+            // std::debug::print(&uxp);
+
             if(xp > uxp){
                 sub_xp(nft, uxp, ctx);
             }else{
@@ -2065,6 +2087,140 @@ module knw_evos::evoscore {
         ob_request::withdraw_request::confirm<Evos>(request, &tx_policy);
         assert!(evos::gems(&evos) == 0, 13);
         assert!(evos::xp(&evos) == 0, 14);
+        ob_kiosk::deposit(&mut kiosk, evos, ctx(&mut scenario));
+        
+        test_scenario::return_to_address(CREATOR, evos_pub);
+
+        test_scenario::return_shared(tx_policy);
+        test_scenario::return_shared(policy);
+        test_scenario::return_shared(clock);
+        test_scenario::return_shared(game);
+        test_scenario::return_shared(incubator);
+        test_scenario::return_shared(kiosk);
+
+        test_scenario::next_tx(&mut scenario, CREATOR);
+        test_scenario::end(scenario);
+    }
+
+    #[test]
+    fun core_on_undelegated_evos_devolve_stage_works_correctly(){
+        let scenario = test_scenario::begin(CREATOR);
+        let user: address = @0xBABBA;
+        knw_evos::utils::create_clock(ctx(&mut scenario));
+
+        init(EVOSCORE {}, ctx(&mut scenario));
+        evos::init_for_test(ctx(&mut scenario));
+        test_scenario::next_tx(&mut scenario, CREATOR);
+
+        assert!(test_scenario::has_most_recent_shared<EvosGame>(), 1);
+        assert!(test_scenario::has_most_recent_shared<evos::Incubator>(), 2);
+
+        let evos_pub = test_scenario::take_from_address<sui::package::Publisher>(&mut scenario, CREATOR);
+        evos::create_transfer_policy(&evos_pub, ctx(&mut scenario));
+        test_scenario::next_tx(&mut scenario, user);
+
+        let policy = test_scenario::take_shared<ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::withdraw_request::WITHDRAW_REQ>>>(&mut scenario);
+        let game = test_scenario::take_shared<EvosGame>(&mut scenario);
+        let incubator = test_scenario::take_shared<evos::Incubator>(&mut scenario);
+        let clock = test_scenario::take_shared<sui::clock::Clock>(&mut scenario);
+        sui::clock::increment_for_testing(&mut clock, 1000);
+
+        evos::create_kiosk_with_evos_for_test(&mut incubator, user, ctx(&mut scenario));
+        test_scenario::next_tx(&mut scenario, user);
+
+        let evos_id = *vector::borrow<ID>(&evos::all_evos_ids(&incubator), 0);
+        let kiosk = test_scenario::take_shared<sui::kiosk::Kiosk>(&mut scenario);
+
+        delegate(&mut game, &mut kiosk, evos_id, &clock, ctx(&mut scenario));
+        test_scenario::return_shared(game);
+        test_scenario::next_tx(&mut scenario, user);
+
+        let game = test_scenario::take_shared<EvosGame>(&mut scenario);
+        assert!(delegations(&game) == 1, 3);
+        
+        assert!(dof::exists_(&game.id, user), 4);
+        let user_info = user_info(&game, user);
+        let slots = slots(user_info);
+        let i: u64 = 0;
+        let sid: std::option::Option<ID> = std::option::none();
+        while(i < vector::length(&slots)){
+            let nft_id = *vector::borrow<ID>(&slots, i);
+            if(nft_id == evos_id){
+                std::option::fill(&mut sid, nft_id);
+                let slot = get_slot(user_info, nft_id);
+                assert!(slot.owner == user, 5);
+                assert!(slot.last_claim_xp == 1000, 6);
+                assert!(slot.last_claim_gems == 1000, 7);
+                // assert!(slot.last_thread_check == 1000, 8);
+                assert!(slot.nft_id == nft_id, 9);
+                break
+            };
+        };
+        assert!(std::option::is_some(&sid), 10);
+        
+        // should earn 68 gems & 272 xp
+        let time_elapsed: u64 = (DEFAULT_XP_TIME_FRAME * 68);
+        sui::clock::increment_for_testing(&mut clock, time_elapsed);
+        test_scenario::next_tx(&mut scenario, user);
+
+        to_next_stage(
+            &mut game,
+            &mut kiosk,
+            evos_id,
+            b"http://test-trait.org",
+            &policy,
+            &clock,
+            ctx(&mut scenario)
+        );
+
+        test_scenario::next_tx(&mut scenario, user);
+
+        cancel_delegation(
+            &mut game,
+            &mut kiosk,
+            std::option::extract(&mut sid),
+            &policy,
+            &clock,
+            ctx(&mut scenario)
+        );
+
+        ob_kiosk::ob_kiosk::assert_not_exclusively_listed(&mut kiosk, evos_id);
+        evos::create_transfer_policy(&evos_pub, ctx(&mut scenario));
+        test_scenario::next_tx(&mut scenario, user);
+
+        let tx_policy = test_scenario::take_shared<ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::withdraw_request::WITHDRAW_REQ>>>(&scenario);
+        let (evos, request) = ob_kiosk::ob_kiosk::withdraw_nft_signed<Evos>(&mut kiosk, evos_id, ctx(&mut scenario));
+        evos::confirm_withdrawal(&mut request);
+        ob_request::withdraw_request::confirm<Evos>(request, &tx_policy);
+
+        assert!(evos::gems(&evos) == 272, 11);
+        assert!(evos::xp(&evos) == 68, 12);
+
+        ob_kiosk::deposit(&mut kiosk, evos, ctx(&mut scenario));
+        
+        // back to 0 xp
+        sui::clock::increment_for_testing(&mut clock, DEFAULT_XP_TIME_FRAME * 60);
+        test_scenario::next_tx(&mut scenario, user);
+
+        assert!(dof::exists_(&game.id, evos_id), 13);
+        assert!(dof::exists_(&game.id, b"traits"), 14);
+
+        on_undelegated_evos(
+            &mut game,
+            evos_id,
+            &mut kiosk,
+            &policy,
+            &clock,
+            ctx(&mut scenario)
+        );
+
+        let (evos, request) = ob_kiosk::ob_kiosk::withdraw_nft_signed<Evos>(&mut kiosk, evos_id, ctx(&mut scenario));
+        evos::confirm_withdrawal(&mut request);
+        ob_request::withdraw_request::confirm<Evos>(request, &tx_policy);
+        assert!(evos::gems(&evos) == 0, 13);
+        assert!(evos::xp(&evos) == 0, 14);
+        assert!(evos::level(&evos) == 1, 15);
+        assert!(evos::stage(&evos) == string::utf8(b"Egg"), 16);
         ob_kiosk::deposit(&mut kiosk, evos, ctx(&mut scenario));
         
         test_scenario::return_to_address(CREATOR, evos_pub);

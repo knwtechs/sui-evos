@@ -39,6 +39,7 @@ module knw_evos::history {
     const EReceiptNotConfirmed: u64 = 1;
     const ENonePending: u64 = 2;
     const EBoxNotFound: u64 = 3;
+    const EItemNotFound: u64 = 4;
 
     public(friend) fun create_history(nft_id: ID, ctx: &mut TxContext): EvosHistory {
         EvosHistory{
@@ -53,11 +54,8 @@ module knw_evos::history {
         }
     }
     public(friend) fun last_devolution_check_for_id(history: &EvosHistory, nft_id: ID): u64 {
-        if(vec_map::contains(&history.last_devolution_for_id, &nft_id)){
-            *vec_map::get(&history.last_devolution_for_id, &nft_id)
-        }else{
-            0
-        }
+        assert!(vec_map::contains(&history.last_devolution_for_id, &nft_id), EItemNotFound);
+        *vec_map::get(&history.last_devolution_for_id, &nft_id)
     }
     public(friend) fun register_devolution_check_for_id(history: &mut EvosHistory, nft_id: ID, value: u64) {
         if(vec_map::contains(&history.last_devolution_for_id, &nft_id)){
