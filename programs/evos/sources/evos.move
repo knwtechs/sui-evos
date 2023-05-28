@@ -365,7 +365,7 @@ module knw_evos::evos {
         transfer::public_transfer(transfer_policy_cap, tx_context::sender(ctx))
     }
     public(friend) fun confirm_withdrawal( 
-        request: &mut ob_request::withdraw_request::WithdrawRequest<Evos>, 
+        request: &mut ob_request::withdraw_request::WithdrawRequest<Evos>,
     ) {
         ob_request::withdraw_request::add_receipt(request, &Witness {}); 
     }
@@ -546,21 +546,19 @@ module knw_evos::evos {
         evos: &mut Evos,
         amount: u32,
         _ctx: &mut TxContext
-    ): u32 {
+    ) {
         //assert!(tx_context::sender(ctx) == incubator.admin, ENotOwner);
-        assert!(evos.gems >= amount, EInsufficientGems);
-        evos.gems = evos.gems - amount;
-        evos.gems
+        //assert!(evos.gems >= amount, EInsufficientGems);
+        evos.gems = amount;
     }
     public(friend) fun set_xp(
         evos: &mut Evos,
         amount: u32,
         _ctx: &mut TxContext
-    ): u32 {
+    ) {
         //assert!(tx_context::sender(ctx) == incubator.admin, ENotOwner);
-        assert!(amount < MAX_U32, EMaxXpExceeded);
+        //assert!(amount < MAX_U32, EMaxXpExceeded);
         evos.xp = amount;
-        evos.xp
     }
     public(friend) fun update_url(
         evos: &mut Evos,
@@ -573,13 +571,13 @@ module knw_evos::evos {
         evos: &mut Evos,
         stage: vector<u8>,
         uri: vector<u8>,
-        xp: u32,
+        // xp: u32,
         _ctx: &mut TxContext
     ) {
         assert!(vector::length(&stage) > 0, EEmptyStage);
-        assert!(xp(evos) >= xp, EInsufficientXp);
+        // assert!(xp(evos) >= xp, EInsufficientXp);
 
-        evos.xp = evos.xp - xp;
+        // evos.xp = evos.xp - xp;
         evos.stage = string::utf8(stage);
         evos.url = url::new_unsafe_from_bytes(uri);
     }

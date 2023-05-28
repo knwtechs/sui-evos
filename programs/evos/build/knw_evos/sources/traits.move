@@ -1,14 +1,13 @@
 /* Author: kunnow
  * Company: KNW Technologies FZCO
  * License: MIT
- * Module details:
- *  Description: TraitsBox management module.
- *  Features:
- *          - Create a new TraitSettings object
- *          - Create a new TraitBox object
- *          - Create & Confirm BoxReceipts
- *          - Get a TraitBox by box index
- *          - Get all TraitBox for a given `Stage` name
+ * Description: TraitsBox management module.
+ * Features:
+ *      - Create a new TraitSettings object
+ *      - Create a new TraitBox object
+ *      - Create & Confirm BoxReceipts
+ *      - Get a TraitBox by box index
+ *      - Get all TraitBox for a given `Stage` name
  */
 module knw_evos::traits {
 
@@ -101,10 +100,6 @@ module knw_evos::traits {
         weight: u8
     ): Trait {
         Trait {name, value, url, weight}
-    }
-
-    public(friend) fun empty_traits(): vector<Trait> {
-        vector::empty<Trait>()
     }
 
     // Trait Settings
@@ -238,5 +233,9 @@ module knw_evos::traits {
         let BoxReceipt {id, nft_id: _, trait: _, prev_url: _, confirmed: _} = receipt;
         object::delete(id);
     }
-    
+
+    // Mist
+    public(friend) fun empty_traits(): vector<Trait> {
+        vector::empty<Trait>()
+    } 
 }

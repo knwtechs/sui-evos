@@ -1,14 +1,13 @@
 /* Author: kunnow
  * Company: KNW Technologies FZCO
  * License: MIT
- * Module details:
- *  Description: History for evoscore dynamics.
- *  Features:
- *          - Create a new EvosHistory object
- *          - Push & Pop a State from the History
- *          - Push & Pop an open box from the History
- *          - Check if a box has already been opened for an NFT
- *          - Get all the opened boxes for an NFT
+ * Description: History for evoscore dynamics.
+ * Features:
+ *      - Create a new EvosHistory object
+ *      - Push & Pop a State from the History
+ *      - Push & Pop an open box from the History
+ *      - Check if a box has already been opened for an NFT
+ *      - Get all the opened boxes for an NFT
  */
 module knw_evos::history {
     
@@ -62,7 +61,6 @@ module knw_evos::history {
         vector::push_back(&mut history.keys, key);
         vector::push_back(&mut history.values, value);
     }
-
     public(friend) fun pop_state(
         history: &mut EvosHistory,
         nft_id: ID
@@ -79,7 +77,6 @@ module knw_evos::history {
         assert!(nft_id == history.nft_id, EWrongNFT);
         vector::push_back<u16>(&mut history.opened_boxes, box_index);
     }
-
     public(friend) fun box_already_open(
         history: &EvosHistory,
         nft_id: ID,
@@ -95,7 +92,6 @@ module knw_evos::history {
         };
         return false
     }
-
     public(friend) fun remove_box_from_opened(
         history: &mut EvosHistory,
         nft_id: ID,
@@ -112,6 +108,9 @@ module knw_evos::history {
         assert!(i < vector::length(&history.opened_boxes), EBoxNotFound);
         vector::remove(&mut history.opened_boxes, i);
     }
+    public(friend) fun opened_boxes(history: &EvosHistory): vector<u16> {
+        history.opened_boxes
+    }
 
     public(friend) fun push_pending(
         history: &mut EvosHistory,
@@ -121,7 +120,6 @@ module knw_evos::history {
         assert!(traits::is_receipt_confirmed(&receipt), EReceiptNotConfirmed);
         vector::push_back(&mut history.pending_receipts, receipt);
     }
-
     public(friend) fun pop_pending(
         history: &mut EvosHistory,
         ctx: &mut TxContext
@@ -129,16 +127,11 @@ module knw_evos::history {
         assert!(has_pending(history, ctx), ENonePending);
         vector::pop_back(&mut history.pending_receipts)
     }
-
     public fun has_pending(
         history: &EvosHistory,
         _ctx: &mut TxContext
     ): bool {
         vector::length(&history.pending_receipts) > 0
-    }
-
-    public(friend) fun opened_boxes(history: &EvosHistory): vector<u16> {
-        history.opened_boxes
     }
 
 }
