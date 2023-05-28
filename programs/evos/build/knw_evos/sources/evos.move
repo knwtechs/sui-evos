@@ -1,4 +1,5 @@
-/* Author: kunnow
+/* 
+ * Author: kunnow
  * Company: KNW Technologies FZCO
  * License: MIT
  * Module details:
@@ -11,13 +12,6 @@
  *          . The Evos is deposited into a kiosk created for the user
  *      - (AdminCap) Add a new `Specie`
  *      - (friend) add_exp, sub_exp, add_gems, sub_gems
-*/
-
-/*
-    User Experience:
-        1. Deposit (entry)
-        2a. Withdraw (exit)
-        2b. Reveal & Play
 */
 module knw_evos::evos {
     

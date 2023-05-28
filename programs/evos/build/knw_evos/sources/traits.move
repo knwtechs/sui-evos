@@ -1,4 +1,5 @@
-/* Author: kunnow
+/* 
+ * Author: kunnow
  * Company: KNW Technologies FZCO
  * License: MIT
  * Description: TraitsBox management module.

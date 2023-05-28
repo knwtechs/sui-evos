@@ -1,4 +1,5 @@
-/* Author: kunnow
+/* 
+ * Author: kunnow
  * Company: KNW Technologies FZCO
  * License: MIT
  * Description: History for evoscore dynamics.
@@ -19,6 +20,7 @@ module knw_evos::history {
     use sui::object::{Self, UID, ID};
     use sui::url::{Url};
     use sui::tx_context::{TxContext};
+    use sui::vec_map;
     
     use knw_evos::traits::{Self, BoxReceipt};
 
@@ -29,7 +31,8 @@ module knw_evos::history {
         keys: vector<ascii::String>,
         values: vector<ascii::String>,
         pending_receipts: vector<BoxReceipt>,
-        opened_boxes: vector<u16>
+        opened_boxes: vector<u16>,
+        last_devolution_for_id: vec_map::VecMap<ID, u64>
     }
 
     const EWrongNFT: u64 = 0;
@@ -45,10 +48,24 @@ module knw_evos::history {
             keys: vector::empty<ascii::String>(),
             values: vector::empty<ascii::String>(),
             pending_receipts: vector::empty<BoxReceipt>(),
-            opened_boxes: vector::empty<u16>()
+            opened_boxes: vector::empty<u16>(),
+            last_devolution_for_id: vec_map::empty<ID, u64>()
         }
     }
-
+    public(friend) fun last_devolution_check_for_id(history: &EvosHistory, nft_id: ID): u64 {
+        if(vec_map::contains(&history.last_devolution_for_id, &nft_id)){
+            *vec_map::get(&history.last_devolution_for_id, &nft_id)
+        }else{
+            0
+        }
+    }
+    public(friend) fun register_devolution_check_for_id(history: &mut EvosHistory, nft_id: ID, value: u64) {
+        if(vec_map::contains(&history.last_devolution_for_id, &nft_id)){
+            *vec_map::get_mut(&mut history.last_devolution_for_id, &nft_id) = value;
+        }else{
+            vec_map::insert(&mut history.last_devolution_for_id, nft_id, value);
+        };
+    }
     public(friend) fun push_state(
         history: &mut EvosHistory,
         nft_id: ID,
