@@ -29,12 +29,16 @@ module ob_launchpad::listing {
 
     use sui::event;
     use sui::transfer;
+    use sui::vec_set::{Self, VecSet};
+    use sui::kiosk::Kiosk;
     use sui::balance::{Self, Balance};
+    use sui::coin::{Self, Coin};
     use sui::object::{Self, ID , UID};
     use sui::dynamic_object_field as dof;
     use sui::tx_context::{Self, TxContext};
     use sui::object_table::{Self, ObjectTable};
     use sui::object_bag::{Self, ObjectBag};
+    use sui::dynamic_field as df;
 
     use originmate::typed_id::{Self, TypedID};
     use originmate::object_box::{Self as obox, ObjectBox};
@@ -44,6 +48,9 @@ module ob_launchpad::listing {
     use ob_launchpad::marketplace::{Self as mkt, Marketplace};
     use ob_launchpad::proceeds::{Self, Proceeds};
     use ob_launchpad::venue::{Self, Venue};
+    use ob_launchpad::rebate::{Self, Rebate};
+
+    use ob_kiosk::ob_kiosk;
 
     friend ob_launchpad::flat_fee;
     friend ob_launchpad::dutch_auction;
@@ -55,7 +62,7 @@ module ob_launchpad::listing {
     friend ob_launchpad::test_fees;
 
     // Track the current version of the module
-    const VERSION: u64 = 1;
+    const VERSION: u64 = 3;
 
     const ENotUpgraded: u64 = 999;
     const EWrongVersion: u64 = 1000;
@@ -65,7 +72,7 @@ module ob_launchpad::listing {
     /// Call `Listing::init_venue` to initialize a `Venue`
     const EUndefinedVenue: u64 = 1;
 
-    /// `Warehouse` or `Factory` was not defined on `Listing`
+    /// `Warehouse` was not defined on `Listing`
     ///
     /// Initialize `Warehouse` using `Listing::init_warehouse` or insert one
     /// using `Listing::add_warehouse`.
@@ -86,6 +93,12 @@ module ob_launchpad::listing {
     const EActionExclusiveToStandaloneListing: u64 = 8;
 
     const EHasCustomFeePolicy: u64 = 9;
+
+    const ENotAMemberNorAdmin: u64 = 10;
+
+    const EWrongAdminNoMembers: u64 = 11;
+
+    const ENoMembers: u64 = 12;
 
     struct Listing has key, store {
         id: UID,
@@ -117,6 +130,7 @@ module ob_launchpad::listing {
     }
 
     struct RequestToJoinDfKey has store, copy, drop {}
+    struct MembersDfKey has store, copy, drop {}
 
     // === Events ===
 
@@ -207,7 +221,7 @@ module ob_launchpad::listing {
         is_whitelisted: bool,
         ctx: &mut TxContext,
     ): ID {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
 
         let venue = venue::new(key, market, is_whitelisted, ctx);
         let venue_id = object::id(&venue);
@@ -242,7 +256,7 @@ module ob_launchpad::listing {
         listing: &mut Listing,
         ctx: &mut TxContext,
     ): ID {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
 
         let inventory = inventory::from_warehouse(warehouse::new<T>(ctx), ctx);
         let inventory_id = object::id(&inventory);
@@ -256,7 +270,7 @@ module ob_launchpad::listing {
         balance: Balance<FT>,
         quantity: u64,
     ) {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
 
         let proceeds = borrow_proceeds_mut(listing);
         proceeds::add(proceeds, balance, quantity);
@@ -291,7 +305,7 @@ module ob_launchpad::listing {
         funds: Balance<FT>,
         buyer: address,
     ) {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
 
         emit_sold_event<FT, T>(nft, balance::value(&funds), buyer);
         pay(listing, funds, 1);
@@ -318,7 +332,7 @@ module ob_launchpad::listing {
         buyer: address,
         funds: Balance<FT>,
     ): T {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
 
         let inventory = inventory_internal_mut<T, Market, MarketKey>(
             listing, key, venue_id, inventory_id,
@@ -350,7 +364,7 @@ module ob_launchpad::listing {
         funds: Balance<FT>,
         ctx: &mut TxContext,
     ): T {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
 
         let inventory = inventory_internal_mut<T, Market, MarketKey>(
             listing, key, venue_id, inventory_id,
@@ -388,7 +402,7 @@ module ob_launchpad::listing {
         funds: Balance<FT>,
         ctx: &mut TxContext,
     ): T {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
 
         let inventory = inventory_internal_mut<T, Market, MarketKey>(
             listing, key, venue_id, inventory_id,
@@ -413,8 +427,8 @@ module ob_launchpad::listing {
         ctx: &mut TxContext,
     ) {
         mkt::assert_version(marketplace);
-        assert_version(listing);
-        assert_listing_admin(listing, ctx);
+        assert_version_and_upgrade(listing);
+        assert_listing_admin_or_member(listing, ctx);
 
         assert!(
             option::is_none(&listing.marketplace_id),
@@ -444,8 +458,8 @@ module ob_launchpad::listing {
         ctx: &mut TxContext,
     ) {
         mkt::assert_version(marketplace);
-        assert_version(listing);
-        mkt::assert_marketplace_admin(marketplace, ctx);
+        assert_version_and_upgrade(listing);
+        mkt::assert_listing_admin_or_member(marketplace, ctx);
 
         assert!(
             option::is_none(&listing.marketplace_id),
@@ -485,10 +499,10 @@ module ob_launchpad::listing {
         ctx: &mut TxContext,
     ) {
         mkt::assert_version(marketplace);
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
 
         assert_listing_marketplace_match(marketplace, listing);
-        mkt::assert_marketplace_admin(marketplace, ctx);
+        mkt::assert_listing_admin_or_member(marketplace, ctx);
 
         obox::add<FeeType>(&mut listing.custom_fee, fee);
     }
@@ -504,8 +518,8 @@ module ob_launchpad::listing {
         venue: Venue,
         ctx: &mut TxContext,
     ) {
-        assert_version(listing);
-        assert_listing_admin(listing, ctx);
+        assert_version_and_upgrade(listing);
+        assert_listing_admin_or_member(listing, ctx);
 
         object_table::add(
             &mut listing.venues,
@@ -530,8 +544,8 @@ module ob_launchpad::listing {
         nft: T,
         ctx: &mut TxContext,
     ) {
-        assert_version(listing);
-        assert_listing_admin(listing, ctx);
+        assert_version_and_upgrade(listing);
+        assert_listing_admin_or_member(listing, ctx);
 
         let inventory = borrow_inventory_mut(listing, inventory_id);
         inventory::deposit_nft(inventory, nft);
@@ -539,7 +553,7 @@ module ob_launchpad::listing {
 
     /// Adds `Inventory` to `Listing`
     ///
-    /// `Inventory` is a type-erased wrapper around `Warehouse` or `Factory`.
+    /// `Inventory` is a type-erased wrapper around `Warehouse`.
     ///
     /// To create a new inventory call `inventory::from_warehouse` or
     /// `inventory::from_factory`.
@@ -552,8 +566,8 @@ module ob_launchpad::listing {
         inventory: Inventory<T>,
         ctx: &mut TxContext,
     ) {
-        assert_version(listing);
-        assert_listing_admin(listing, ctx);
+        assert_version_and_upgrade(listing);
+        assert_listing_admin_or_member(listing, ctx);
 
         let inventory_id = object::id(&inventory);
         object_bag::add(&mut listing.inventories, inventory_id, inventory);
@@ -573,7 +587,7 @@ module ob_launchpad::listing {
         warehouse: Warehouse<T>,
         ctx: &mut TxContext,
     ) {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
         // We are asserting that the caller is the listing admin in
         // the call `add_inventory`
 
@@ -593,7 +607,7 @@ module ob_launchpad::listing {
         warehouse: Warehouse<T>,
         ctx: &mut TxContext,
     ): ID {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
         // We are asserting that the caller is the listing admin in
         // the call `add_inventory`
 
@@ -610,8 +624,8 @@ module ob_launchpad::listing {
         venue_id: ID,
         ctx: &mut TxContext,
     ) {
-        assert_version(listing);
-        assert_listing_admin(listing, ctx);
+        assert_version_and_upgrade(listing);
+        assert_listing_admin_or_member(listing, ctx);
         venue::set_live(borrow_venue_mut(listing, venue_id), true);
     }
 
@@ -622,9 +636,38 @@ module ob_launchpad::listing {
         venue_id: ID,
         ctx: &mut TxContext,
     ) {
-        assert_version(listing);
-        assert_listing_admin(listing, ctx);
+        assert_version_and_upgrade(listing);
+        assert_listing_admin_or_member(listing, ctx);
         venue::set_live(borrow_venue_mut(listing, venue_id), false);
+    }
+
+    public entry fun add_member(
+        listing: &mut Listing,
+        member: address,
+        ctx: &mut TxContext,
+    ) {
+        assert_version_and_upgrade(listing);
+        assert_listing_admin(listing, ctx);
+
+        if (df::exists_(&mut listing.id, MembersDfKey {})) {
+            let members = df::borrow_mut(&mut listing.id, MembersDfKey {});
+            vec_set::insert(members, member);
+        } else {
+            let members = vec_set::singleton(member);
+            df::add(&mut listing.id, MembersDfKey {}, members);
+        };
+    }
+
+    public entry fun remove_member(
+        listing: &mut Listing,
+        member: address,
+        ctx: &mut TxContext,
+    ) {
+        assert_version_and_upgrade(listing);
+        assert_listing_admin(listing, ctx);
+
+        let members = df::borrow_mut(&mut listing.id, MembersDfKey {});
+        vec_set::remove(members, &member);
     }
 
     /// Set market's live status to `true` therefore making the NFT sale live.
@@ -635,10 +678,10 @@ module ob_launchpad::listing {
         venue_id: ID,
         ctx: &mut TxContext,
     ) {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
         assert_listing_marketplace_match(marketplace, listing);
         mkt::assert_version(marketplace);
-        mkt::assert_marketplace_admin(marketplace, ctx);
+        mkt::assert_listing_admin_or_member(marketplace, ctx);
 
         venue::set_live(
             borrow_venue_mut(listing, venue_id),
@@ -654,10 +697,10 @@ module ob_launchpad::listing {
         venue_id: ID,
         ctx: &mut TxContext,
     ) {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
         assert_listing_marketplace_match(marketplace, listing);
         mkt::assert_version(marketplace);
-        mkt::assert_marketplace_admin(marketplace, ctx);
+        mkt::assert_listing_admin_or_member(marketplace, ctx);
 
         venue::set_live(
             borrow_venue_mut(listing, venue_id),
@@ -665,15 +708,20 @@ module ob_launchpad::listing {
         );
     }
 
-    /// To be called by `Listing` admins for standalone `Listings`.
-    /// Standalone Listings do not involve marketplace fees, and therefore
-    /// the listing admin can freely call this entrypoint.
+    /// Collect proceeds and fees from standalone listing
+    ///
+    /// Requires that caller is listing admin in order to protect against
+    /// rugpulls.
+    ///
+    /// #### Panics
+    ///
+    /// Panics if `Listing` was attached to the `Marketplace`.
     public entry fun collect_proceeds<FT>(
         listing: &mut Listing,
         ctx: &mut TxContext,
     ) {
-        assert_version(listing);
-        assert_listing_admin(listing, ctx);
+        assert_version_and_upgrade(listing);
+        assert_listing_admin_or_member(listing, ctx);
 
         assert!(
             option::is_none(&listing.marketplace_id),
@@ -734,6 +782,13 @@ module ob_launchpad::listing {
         object_table::borrow(&listing.venues, venue_id)
     }
 
+    /// Borrow the listsin's members
+    public fun borrow_members(listing: &Listing): &VecSet<address> {
+        assert!(df::exists_(&listing.id, MembersDfKey {}), ENoMembers);
+
+        df::borrow(&listing.id, MembersDfKey {})
+    }
+
     /// Mutably borrow the listing's `Venue`
     ///
     /// #### Panics
@@ -756,7 +811,7 @@ module ob_launchpad::listing {
         key: MarketKey,
         venue_id: ID,
     ): &mut Venue {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
         let venue = borrow_venue_mut(listing, venue_id);
         venue::assert_market<Market, MarketKey>(key, venue);
 
@@ -772,7 +827,7 @@ module ob_launchpad::listing {
         key: MarketKey,
         venue_id: ID,
     ): &mut Market {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
         let venue =
             venue_internal_mut<Market, MarketKey>(listing, key, venue_id);
         venue::borrow_market_mut(key, venue)
@@ -789,7 +844,7 @@ module ob_launchpad::listing {
         key: MarketKey,
         venue_id: ID,
     ): Venue {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
         let venue = object_table::remove(&mut listing.venues, venue_id);
         venue::assert_market<Market, MarketKey>(key, &venue);
         venue
@@ -839,25 +894,8 @@ module ob_launchpad::listing {
         venue_id: ID,
         inventory_id: ID,
     ): &mut Inventory<T> {
-        assert_version(listing);
+        assert_version_and_upgrade(listing);
         venue_internal_mut<Market, MarketKey>(listing, key, venue_id);
-        borrow_inventory_mut(listing, inventory_id)
-    }
-
-    /// Mutably borrow an `Inventory`
-    ///
-    /// This call is protected and only the administrator can call it
-    ///
-    /// #### Panics
-    ///
-    /// Panics if transaction sender is not an admin or inventory does not exist.
-    public fun inventory_admin_mut<T>(
-        listing: &mut Listing,
-        inventory_id: ID,
-        ctx: &mut TxContext,
-    ): &mut Inventory<T> {
-        assert_version(listing);
-        assert_listing_admin(listing, ctx);
         borrow_inventory_mut(listing, inventory_id)
     }
 
@@ -873,8 +911,346 @@ module ob_launchpad::listing {
         inventory_id: ID,
     ): Option<u64> {
         assert_inventory<T>(listing, inventory_id);
+
         let inventory = borrow_inventory<T>(listing, inventory_id);
         inventory::supply(inventory)
+    }
+
+    // === Rebates ===
+
+    /// Checks whether rebate policy exists
+    public fun has_rebate<T: key + store, FT>(listing: &Listing): bool {
+        rebate::has_rebate<T, FT>(&listing.id)
+    }
+
+    /// Borrows rebate policy
+    ///
+    /// #### Panics
+    ///
+    /// Panics if rebate policy does not exist
+    public fun borrow_rebate<T: key + store, FT>(listing: &Listing): &Rebate<FT> {
+        rebate::borrow_rebate<T, FT>(&listing.id)
+    }
+
+    /// Mutably borrows rebate policy
+    ///
+    /// #### Panics
+    ///
+    /// Panics if rebate policy does not exist
+    fun borrow_rebate_mut<T: key + store, FT>(listing: &mut Listing): &mut Rebate<FT> {
+        rebate::borrow_rebate_mut<T, FT>(&mut listing.id)
+    }
+
+    /// Sets rebate policy
+    ///
+    /// Rebate amount defines the amount of token `FT` that gets transferred
+    /// back to the user after purchase.
+    public entry fun set_rebate<T: key + store, FT>(
+        listing: &mut Listing,
+        rebate_amount: u64,
+        ctx: &mut TxContext,
+    ) {
+        assert_listing_admin(listing, ctx);
+        rebate::set_rebate<T, FT>(&mut listing.id, rebate_amount)
+    }
+
+    /// Add funds to rebate policy
+    ///
+    /// #### Panics
+    ///
+    /// Panics if rebate policy for given type and token, `FT`, was not
+    /// previously defined.
+    public fun fund_rebate_with_balance<T: key + store, FT>(
+        listing: &mut Listing,
+        balance: &mut Balance<FT>,
+        fund_amount: u64,
+    ) {
+        rebate::fund_rebate<T, FT>(&mut listing.id, balance, fund_amount)
+    }
+
+    /// Add funds to rebate policy
+    ///
+    /// #### Panics
+    ///
+    /// Panics if rebate policy for given type and token, `FT`, was not
+    /// previously defined.
+    public entry fun fund_rebate<T: key + store, FT>(
+        listing: &mut Listing,
+        wallet: &mut Coin<FT>,
+        fund_amount: u64,
+    ) {
+        fund_rebate_with_balance<T, FT>(
+            listing, coin::balance_mut(wallet), fund_amount,
+        )
+    }
+
+    /// Withdraw rebate funds to balance
+    ///
+    /// #### Panics
+    ///
+    /// Panics if rebate for a given type and token, `FT` was not previously
+    /// defined.
+    public fun withdraw_rebate_funds_to_balance<T: key + store, FT>(
+        listing: &mut Listing,
+        balance: &mut Balance<FT>,
+        amount: u64,
+        ctx: &mut TxContext,
+    ) {
+        assert_listing_admin(listing, ctx);
+        rebate::withdraw_rebate_funds<T, FT>(
+            &mut listing.id, balance, amount,
+        );
+    }
+
+    /// Withdraw rebate funds
+    ///
+    /// #### Panics
+    ///
+    /// Panics if rebate for a given type and token, `FT` was not previously
+    /// defined.
+    public entry fun withdraw_rebate_funds<T: key + store, FT>(
+        listing: &mut Listing,
+        coin: &mut Coin<FT>,
+        amount: u64,
+        ctx: &mut TxContext,
+    ) {
+        withdraw_rebate_funds_to_balance<T, FT>(
+            listing, coin::balance_mut(coin), amount, ctx,
+        );
+    }
+
+    /// Send rebate funds to transaction sender
+    ///
+    /// #### Panics
+    ///
+    /// Panics if rebate for a given type and token, `FT` was not previously
+    /// defined.
+    public entry fun send_rebate_funds_to_sender<T: key + store, FT>(
+        listing: &mut Listing,
+        amount: u64,
+        ctx: &mut TxContext,
+    ) {
+        send_rebate_funds_to_address<T, FT>(
+            listing, amount, tx_context::sender(ctx), ctx,
+        );
+    }
+
+    /// Send rebate funds to given address
+    ///
+    /// #### Panics
+    ///
+    /// Panics if rebate for a given type and token, `FT` was not previously
+    /// defined.
+    public entry fun send_rebate_funds_to_address<T: key + store, FT>(
+        listing: &mut Listing,
+        amount: u64,
+        receiver: address,
+        ctx: &mut TxContext,
+    ) {
+        let coin = coin::zero<FT>(ctx);
+        withdraw_rebate_funds<T, FT>(listing, &mut coin, amount, ctx);
+        transfer::public_transfer(coin, receiver);
+    }
+
+    /// Apply rebate funds
+    ///
+    /// Never aborts.
+    public(friend) fun apply_rebate<T: key + store, FT>(
+        listing: &mut Listing,
+        wallet: &mut Balance<FT>,
+    ) {
+        rebate::apply_rebate<T, FT>(&mut listing.id, wallet)
+    }
+
+    /// Send rebate funds
+    ///
+    /// Never aborts.
+    public(friend) fun send_rebate<T: key + store, FT>(
+        listing: &mut Listing,
+        receiver: address,
+        ctx: &mut TxContext,
+    ) {
+        rebate::send_rebate<T, FT>(&mut listing.id, receiver, ctx)
+    }
+
+    // === Admin ===
+
+    /// Mutably borrow an `Inventory`
+    ///
+    /// This call is protected and only the `Listing` administrator can call it
+    ///
+    /// #### Panics
+    ///
+    /// Panics if transaction sender is not an admin or inventory does not exist.
+    public fun inventory_admin_mut<T>(
+        listing: &mut Listing,
+        inventory_id: ID,
+        ctx: &mut TxContext,
+    ): &mut Inventory<T> {
+        assert_version_and_upgrade(listing);
+        assert_listing_admin_or_member(listing, ctx);
+
+        borrow_inventory_mut(listing, inventory_id)
+    }
+
+    /// Redeem NFT from `Listing`
+    ///
+    /// This call is protected and only the `Listing` administrator can call
+    /// it. Used for business situations when launch strategy is changed during
+    /// launches.
+    ///
+    /// #### Panics
+    ///
+    /// Panics if transaction sender is not admin, inventory or NFT does not exist.
+    public fun admin_redeem_nft<T: key + store>(
+        listing: &mut Listing,
+        inventory_id: ID,
+        ctx: &mut TxContext,
+    ): T {
+        let inventory = inventory_admin_mut<T>(listing, inventory_id, ctx);
+        inventory::redeem_nft(inventory)
+    }
+
+    /// Redeem NFT from `Listing` and send to address
+    ///
+    /// This call is protected and only the `Listing` administrator can call
+    /// it. Used for business situations when launch strategy is changed during
+    /// launches.
+    ///
+    /// #### Panics
+    ///
+    /// Panics if transaction sender is not admin, inventory or NFT does not exist.
+    public entry fun admin_redeem_nft_and_transfer<T: key + store>(
+        listing: &mut Listing,
+        inventory_id: ID,
+        receiver: address,
+        ctx: &mut TxContext
+    ) {
+        let nft = admin_redeem_nft<T>(listing, inventory_id, ctx);
+        transfer::public_transfer(nft, receiver);
+    }
+
+    /// Redeem NFT from `Listing` and airdrop to `Kiosk`
+    ///
+    /// This call is protected and only the `Listing` administrator can call
+    /// it. Used for business situations when launch strategy is changed during
+    /// launches.
+    ///
+    /// #### Panics
+    ///
+    /// Panics if transaction sender is not admin, inventory or NFT does not exist.
+    public entry fun admin_redeem_nft_to_kiosk<T: key + store>(
+        listing: &mut Listing,
+        inventory_id: ID,
+        receiver: &mut Kiosk,
+        ctx: &mut TxContext
+    ) {
+        let nft = admin_redeem_nft<T>(listing, inventory_id, ctx);
+        ob_kiosk::deposit(receiver, nft, ctx);
+    }
+
+    /// Redeem NFT from `Listing` and airdrop to new `Kiosk`
+    ///
+    /// This call is protected and only the `Listing` administrator can call
+    /// it. Used for business situations when launch strategy is changed during
+    /// launches.
+    ///
+    /// #### Panics
+    ///
+    /// Panics if transaction sender is not admin, inventory or NFT does not exist.
+    public entry fun admin_redeem_nft_to_new_kiosk<T: key + store>(
+        listing: &mut Listing,
+        inventory_id: ID,
+        receiver: address,
+        ctx: &mut TxContext
+    ) {
+        let nft = admin_redeem_nft<T>(listing, inventory_id, ctx);
+        let (kiosk, _) = ob_kiosk::new_for_address(receiver, ctx);
+        ob_kiosk::deposit(&mut kiosk, nft, ctx);
+        transfer::public_share_object(kiosk);
+    }
+
+    /// Redeem NFT from `Listing` with ID
+    ///
+    /// This call is protected and only the `Listing` administrator can call
+    /// it. Used for business situations when launch strategy is changed during
+    /// launches.
+    ///
+    /// #### Panics
+    ///
+    /// Panics if transaction sender is not admin, inventory or NFT does not exist.
+    public fun admin_redeem_nft_with_id<T: key + store>(
+        listing: &mut Listing,
+        inventory_id: ID,
+        nft_id: ID,
+        ctx: &mut TxContext,
+    ): T {
+        let inventory = inventory_admin_mut<T>(listing, inventory_id, ctx);
+        inventory::redeem_nft_with_id(inventory, nft_id)
+    }
+
+    /// Redeem NFT from `Listing` with ID and send to address
+    ///
+    /// This call is protected and only the `Listing` administrator can call
+    /// it. Used for business situations when launch strategy is changed during
+    /// launches.
+    ///
+    /// #### Panics
+    ///
+    /// Panics if transaction sender is not admin, inventory or NFT does not exist.
+    public entry fun admin_redeem_nft_with_id_and_transfer<T: key + store>(
+        listing: &mut Listing,
+        inventory_id: ID,
+        nft_id: ID,
+        receiver: address,
+        ctx: &mut TxContext
+    ) {
+        let nft = admin_redeem_nft_with_id<T>(
+            listing, inventory_id, nft_id, ctx,
+        );
+        transfer::public_transfer(nft, receiver);
+    }
+
+    /// Redeem NFT from `Listing` and airdrop to `Kiosk`
+    ///
+    /// This call is protected and only the `Listing` administrator can call
+    /// it. Used for business situations when launch strategy is changed during
+    /// launches.
+    ///
+    /// #### Panics
+    ///
+    /// Panics if transaction sender is not admin, inventory or NFT does not exist.
+    public entry fun admin_redeem_nft_with_id_to_kiosk<T: key + store>(
+        listing: &mut Listing,
+        inventory_id: ID,
+        nft_id: ID,
+        receiver: &mut Kiosk,
+        ctx: &mut TxContext
+    ) {
+        let nft = admin_redeem_nft_with_id<T>(listing, inventory_id, nft_id, ctx);
+        ob_kiosk::deposit(receiver, nft, ctx);
+    }
+
+    /// Redeem NFT from `Listing` and airdrop to new `Kiosk`
+    ///
+    /// This call is protected and only the `Listing` administrator can call
+    /// it. Used for business situations when launch strategy is changed during
+    /// launches.
+    ///
+    /// #### Panics
+    ///
+    /// Panics if transaction sender is not admin, inventory or NFT does not exist.
+    public entry fun admin_redeem_nft_with_id_to_new_kiosk<T: key + store>(
+        listing: &mut Listing,
+        inventory_id: ID,
+        nft_id: ID,
+        receiver: address,
+        ctx: &mut TxContext
+    ) {
+        let nft = admin_redeem_nft_with_id<T>(listing, inventory_id, nft_id, ctx);
+        let (kiosk, _) = ob_kiosk::new_for_address(receiver, ctx);
+        ob_kiosk::deposit(&mut kiosk, nft, ctx);
+        transfer::public_share_object(kiosk);
     }
 
     // === Assertions ===
@@ -898,6 +1274,28 @@ module ob_launchpad::listing {
         );
     }
 
+    public fun assert_listing_admin_or_member(listing: &Listing, ctx: &mut TxContext) {
+        let is_admin = tx_context::sender(ctx) == listing.admin;
+
+        if (is_admin == false) {
+            assert!(df::exists_(&listing.id, MembersDfKey {}), EWrongAdminNoMembers);
+            let members = df::borrow(&listing.id, MembersDfKey {});
+
+            assert!(vec_set::contains(members, &tx_context::sender(ctx)), ENotAMemberNorAdmin);
+        }
+    }
+
+    public fun is_admin_or_member(listing: &Listing, ctx: &mut TxContext): bool {
+        let is_admin_or_member = tx_context::sender(ctx) == listing.admin;
+
+        if (is_admin_or_member == false && df::exists_(&listing.id, MembersDfKey {})) {
+            let members = df::borrow(&listing.id, MembersDfKey {});
+            is_admin_or_member = vec_set::contains(members, &tx_context::sender(ctx))
+        };
+
+        is_admin_or_member
+    }
+
     public fun assert_correct_admin(
         marketplace: &Marketplace,
         listing: &Listing,
@@ -909,6 +1307,20 @@ module ob_launchpad::listing {
 
         assert!(
             is_listing_admin || is_market_admin,
+            EWrongListingOrMarketplaceAdmin,
+        );
+    }
+
+    public fun assert_correct_admin_or_member(
+        marketplace: &Marketplace,
+        listing: &Listing,
+        ctx: &mut TxContext,
+    ) {
+        let is_listing_admin_or_member = is_admin_or_member(listing, ctx);
+        let is_market_admin_or_member = mkt::is_admin_or_member(marketplace, ctx);
+
+        assert!(
+            is_listing_admin_or_member || is_market_admin_or_member,
             EWrongListingOrMarketplaceAdmin,
         );
     }
@@ -925,7 +1337,7 @@ module ob_launchpad::listing {
     }
 
     public fun assert_inventory<T>(listing: &Listing, inventory_id: ID) {
-        // Inventory can be either `Warehouse` or `Factory`
+        // Inventory can be either `Warehouse`
         assert!(
             contains_inventory<T>(listing, inventory_id), EUndefinedInventory,
         );
@@ -935,6 +1347,13 @@ module ob_launchpad::listing {
 
     fun assert_version(listing: &Listing) {
         assert!(listing.version == VERSION, EWrongVersion);
+    }
+
+    fun assert_version_and_upgrade(self: &mut Listing) {
+        if (self.version < VERSION) {
+            self.version = VERSION;
+        };
+        assert_version(self);
     }
 
     entry fun migrate(listing: &mut Listing, ctx: &mut TxContext) {

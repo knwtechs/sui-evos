@@ -203,6 +203,9 @@ module knw_evos::traits {
     public fun trait_url(trait: &Trait): Url {
         trait.url
     }
+    public fun trait_weight(trait: &Trait): u8 {
+        trait.weight
+    }
 
     // BoxReceipt
     public(friend) fun new_receipt(trait: Trait, nft_id: ID, prev_url: Url, ctx: &mut TxContext): BoxReceipt {

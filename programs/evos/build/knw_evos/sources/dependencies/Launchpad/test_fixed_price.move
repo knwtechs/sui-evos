@@ -25,14 +25,14 @@ module ob_launchpad::test_fixed_price {
     const BUYER: address = @0xA1C06;
 
     /// Initializes warehouse and market
-    fun init_market(
+    public fun init_market<T: key + store, FT>(
         listing: &mut Listing,
         price: u64,
         is_whitelisted: bool,
         scenario: &mut Scenario,
     ): (ID, ID) {
-        let inventory_id = listing::create_warehouse<Foo>(listing, ctx(scenario));
-        let venue_id = fixed_price::create_venue<Foo, SUI>(
+        let inventory_id = listing::create_warehouse<T>(listing, ctx(scenario));
+        let venue_id = fixed_price::create_venue<T, FT>(
             listing, inventory_id, is_whitelisted, price, ctx(scenario)
         );
 
@@ -45,7 +45,7 @@ module ob_launchpad::test_fixed_price {
         let listing = init_listing(CREATOR, &mut scenario);
 
         let (_, venue_id) =
-            init_market(&mut listing, 10, false, &mut scenario);
+            init_market<Foo, SUI>(&mut listing, 10, false, &mut scenario);
         let market = fixed_price::borrow_market(
             listing::borrow_venue(&listing, venue_id)
         );
@@ -63,7 +63,7 @@ module ob_launchpad::test_fixed_price {
         let listing = init_listing(CREATOR, &mut scenario);
 
         let (_, venue_id) =
-            init_market(&mut listing, 10, false, &mut scenario);
+            init_market<Foo, SUI>(&mut listing, 10, false, &mut scenario);
 
         let wallet = coin::mint_for_testing<SUI>(10, ctx(&mut scenario));
         fixed_price::buy_nft<Foo, SUI>(
@@ -85,7 +85,7 @@ module ob_launchpad::test_fixed_price {
         let listing = init_listing(CREATOR, &mut scenario);
 
         let (_, venue_id) =
-            init_market(&mut listing, 10, false, &mut scenario);
+            init_market<Foo, SUI>(&mut listing, 10, false, &mut scenario);
         listing::sale_on(&mut listing, venue_id, ctx(&mut scenario));
 
         let wallet = coin::mint_for_testing<SUI>(10, ctx(&mut scenario));
@@ -107,9 +107,10 @@ module ob_launchpad::test_fixed_price {
         let listing = init_listing(CREATOR, &mut scenario);
 
         let (warehouse_id, venue_id) =
-            init_market(&mut listing, 10, false, &mut scenario);
+            init_market<Foo, SUI>(&mut listing, 10, false, &mut scenario);
 
         let nft = Foo { id: object::new(ctx(&mut scenario)) };
+        let nft_id = object::id(&nft);
 
         listing::add_nft(
             &mut listing, warehouse_id, nft, ctx(&mut scenario)
@@ -138,13 +139,14 @@ module ob_launchpad::test_fixed_price {
         assert!(proceeds::total(proceeds) == 1, 0);
         assert!(balance::value(proceeds::balance<SUI>(proceeds)) == 10, 0);
 
-        // Check NFT was transferred with correct logical owner
-        let nft = test_scenario::take_from_address<Foo>(
-            &scenario, BUYER
-        );
-        transfer::public_transfer(nft, BUYER);
+        // Check Kiosk was created and NFT transferred
+        let kiosk = test_scenario::take_shared<sui::kiosk::Kiosk>(&scenario);
+        assert!(sui::kiosk::owner(&kiosk) == BUYER, 0);
+
+        ob_kiosk::ob_kiosk::assert_nft_type<Foo>(&kiosk, nft_id);
 
         transfer::public_transfer(wallet, BUYER);
+        test_scenario::return_shared(kiosk);
         test_scenario::return_shared(listing);
         test_scenario::end(scenario);
     }
@@ -156,7 +158,7 @@ module ob_launchpad::test_fixed_price {
         let listing = init_listing(CREATOR, &mut scenario);
 
         let (_, venue_id) =
-            init_market(&mut listing, 10, true, &mut scenario);
+            init_market<Foo, SUI>(&mut listing, 10, true, &mut scenario);
         listing::sale_on(&mut listing, venue_id, ctx(&mut scenario));
 
         test_scenario::next_tx(&mut scenario, BUYER);
@@ -184,7 +186,7 @@ module ob_launchpad::test_fixed_price {
         let listing = init_listing(CREATOR, &mut scenario);
 
         let (warehouse_id, venue_id) =
-            init_market(&mut listing, 10, true, &mut scenario);
+            init_market<Foo, SUI>(&mut listing, 10, true, &mut scenario);
 
         listing::add_nft(
             &mut listing,
@@ -220,13 +222,13 @@ module ob_launchpad::test_fixed_price {
     }
 
     #[test]
-    #[expected_failure(abort_code = listing::EWrongAdmin)]
+    #[expected_failure(abort_code = listing::EWrongAdminNoMembers)]
     fun try_change_price() {
         let scenario = test_scenario::begin(CREATOR);
         let listing = init_listing(CREATOR, &mut scenario);
 
         let (_, venue_id) =
-            init_market(&mut listing, 10, true, &mut scenario);
+            init_market<Foo, SUI>(&mut listing, 10, true, &mut scenario);
 
         test_scenario::next_tx(&mut scenario, BUYER);
 
@@ -244,7 +246,7 @@ module ob_launchpad::test_fixed_price {
         let listing = init_listing(CREATOR, &mut scenario);
 
         let (_, venue_id) =
-            init_market(&mut listing, 10, true, &mut scenario);
+            init_market<Foo, SUI>(&mut listing, 10, true, &mut scenario);
 
         test_scenario::next_tx(&mut scenario, CREATOR);
 

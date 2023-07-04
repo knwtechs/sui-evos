@@ -209,7 +209,7 @@ module ob_launchpad::dutch_auction {
     ) {
         // TODO: Consider an entrypoint to be called by the Marketplace instead of
         // the listing admin
-        listing::assert_listing_admin(listing, ctx);
+        listing::assert_listing_admin_or_member(listing, ctx);
 
         let venue = listing::venue_internal_mut<DutchAuctionMarket<FT>, MarketKey>(
             listing, MarketKey {}, venue_id
@@ -223,8 +223,8 @@ module ob_launchpad::dutch_auction {
         venue::set_live(venue, false);
     }
 
-    /// Conclude the auction and toggle the Slingshot's `live` to `false`.
-    /// NFTs will be allocated to the winning biddeers.
+    /// Conclude the auction and toggle end the sale, allocating NFTs to the
+    /// winning bidders.
     ///
     /// Permissioned endpoint to be called by `admin`.
     public entry fun sale_conclude<T: key + store, FT>(
@@ -234,7 +234,7 @@ module ob_launchpad::dutch_auction {
     ) {
         // TODO: Consider an entrypoint to be called by the Marketplace instead
         // of the listing admin
-        listing::assert_listing_admin(listing, ctx);
+        listing::assert_listing_admin_or_member(listing, ctx);
 
         // Determine how much inventory there is to sell
         let market = borrow_market<FT>(listing::borrow_venue(listing, venue_id));
@@ -277,7 +277,7 @@ module ob_launchpad::dutch_auction {
             let nft = inventory::redeem_pseudorandom_nft(inventory, ctx);
 
             // Since we do not know the users Kiosk, create a new one for them
-            let (kiosk, _) = ob_kiosk::new(ctx);
+            let (kiosk, _) = ob_kiosk::new_for_address(owner, ctx);
             ob_kiosk::deposit(&mut kiosk, nft, ctx);
             transfer::public_share_object(kiosk);
 

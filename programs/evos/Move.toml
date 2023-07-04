@@ -5,13 +5,14 @@ version = "0.0.2"
 published-at = "0x49ce9593e850d374d4b7fc6813312760aee0d4e7816b9e082efc7563bca96e94"
 
 [dependencies]
-NftProtocol = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/nft_protocol"}
-Launchpad = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/launchpad"}
-Permissions = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/permissions"}
-Utils = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/utils"}
-Request = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/request"}
-Pseudorandom = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/pseudorandom"}
-LiquidityLayerV1 = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/liquidity_layer_v1"}
+#NftProtocol = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/nft_protocol"}
+NftProtocol = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "v1.3.0-mainnet", subdir = "contracts/nft_protocol"}
+Launchpad = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "v1.3.0-mainnet", subdir = "contracts/launchpad"}
+Permissions = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "v1.3.0-mainnet", subdir = "contracts/permissions"}
+Utils = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "v1.3.0-mainnet", subdir = "contracts/utils"}
+Request = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "v1.3.0-mainnet", subdir = "contracts/request"}
+Pseudorandom = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "v1.3.0-mainnet", subdir = "contracts/pseudorandom"}
+LiquidityLayerV1 = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "v1.3.0-mainnet", subdir = "contracts/liquidity_layer_v1"}
 knw_genesis = {local = "../genesis"}
 
 [addresses]

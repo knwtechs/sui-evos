@@ -15,14 +15,14 @@ export function generate_account(){
     return Ed25519Keypair.generate();
 }
 
-export function load_account(): Ed25519Keypair {
+export function load_account(index = 0): Ed25519Keypair {
     let c = readFileSync("/Users/filipposofi/.sui/sui_config/sui.keystore");
     let t = c.toString();
     t = t.replace("[\n", "");
     t = t.replace("\"", "");
     t = t.replace("]", "");
     let _t = t.split(",");
-    const raw = fromB64(_t[0]);
+    const raw = fromB64(_t[index]);
     if (raw[0] !== 0 || raw.length !== PRIVATE_KEY_SIZE + 1) {
       throw new Error('invalid key');
     }

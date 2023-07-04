@@ -6,6 +6,7 @@ let signer = get_signer(load_account());
 const WALLETS_LIST = "/Users/filipposofi/Documents/Development/blockchain/sui/KunnowTechnologies/ev0s/scripts/aairdrop/list.txt";
 const RECIPIENTS = load_airdrop_list(WALLETS_LIST);
 const DELAY = 250
+const COLLECTION_TYPE = ""
 
 const do_all = async (recipients: {address: string, amount: number}[]) => {
     for(let i=0; i<recipients.length; i++){

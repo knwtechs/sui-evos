@@ -1,0 +1,20 @@
+{
+  "name": "public",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx tsc && node build/test.js",
+    "airdrop": "npx tsc && node build/airdrop.js",
+    "check": "npx tsc && node build/check.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.0.4"
+  },
+  "dependencies": {
+    "@mysten/sui.js": "^0.34.1"
+  }
+}

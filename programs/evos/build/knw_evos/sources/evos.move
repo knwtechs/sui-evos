@@ -371,6 +371,142 @@ module knw_evos::evos {
     }
     /* END UPDATE */
 
+    /* UPDATE 04/07/23 */
+    public fun create_borrow_policy(
+        publisher: &Publisher,
+        ctx: &mut TxContext
+    ) {
+        let (borrow_policy, borrow_policy_cap) = ob_request::borrow_request::init_policy<Evos>(publisher, ctx);
+        transfer::public_share_object(borrow_policy);
+        transfer::public_transfer(borrow_policy_cap, tx_context::sender(ctx))
+    }
+    public(friend) fun add_gems_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        amount: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let gems = gems(nft);
+        set_gems(nft, gems + amount, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun sub_gems_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        amount: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let gems = gems(nft);
+        assert!(gems >= amount, EInsufficientGems);
+        set_gems(nft, gems - amount, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun add_xp_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        amount: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let xp = xp(nft);
+        set_xp(nft, xp + amount, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun sub_xp_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        amount: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let xp = xp(nft);
+        assert!(xp >= amount, EInsufficientXp);
+        set_xp(nft, xp - amount, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun update_url_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        new_url: vector<u8>,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        update_url(nft, new_url, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun set_stage_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        stage: vector<u8>,
+        uri: vector<u8>,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        assert!(vector::length(&stage) > 0, EEmptyStage);
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        set_stage(nft, stage, uri, ctx);
+        //update_url(nft, uri);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun set_level_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        level: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        set_level(nft, level, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun set_attribute_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        name: vector<u8>,
+        value: vector<u8>,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let attributes = attributes::get_attributes_mut(&mut nft.attributes);
+        let key = ascii::string(name);
+        if(vec_map::contains(attributes, &key)){
+            if(vector::length(&value) == 1 && *vector::borrow(&value, 0) == 0u8){
+                remove_attribute(nft, name, ctx);
+            }else{
+                *vec_map::get_mut(attributes, &key) = ascii::string(value);
+            }
+        }else{
+            attributes::insert_attribute<Witness, Evos>(&mut nft.attributes, key, ascii::string(value));
+        };
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    /* END UPDATE */
+
+
     public entry fun migrate(
         _: &AdminCap,
         incubator: &mut Incubator,
@@ -565,15 +701,11 @@ module knw_evos::evos {
         evos: &mut Evos,
         stage: vector<u8>,
         uri: vector<u8>,
-        // xp: u32,
-        _ctx: &mut TxContext
+        ctx: &mut TxContext
     ) {
         assert!(vector::length(&stage) > 0, EEmptyStage);
-        // assert!(xp(evos) >= xp, EInsufficientXp);
-
-        // evos.xp = evos.xp - xp;
         evos.stage = string::utf8(stage);
-        evos.url = url::new_unsafe_from_bytes(uri);
+        update_url(evos, uri, ctx);
     }
     public(friend) fun set_level(
         evos: &mut Evos,
@@ -582,6 +714,7 @@ module knw_evos::evos {
     ) {
         evos.level = level
     }
+
     // It add an attribute with name=name and value=value ( update if already exists an attribute with key=name )
     // It removes an existings attribute if value=[0u8]
     public(friend) fun set_attribute(

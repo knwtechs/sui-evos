@@ -22,7 +22,7 @@ module knw_evos::history {
     use sui::tx_context::{TxContext};
     use sui::vec_map;
     
-    use knw_evos::traits::{Self, BoxReceipt};
+    use knw_evos::traits::{BoxReceipt};
 
     struct EvosHistory has key, store {
         id: UID,
@@ -36,8 +36,8 @@ module knw_evos::history {
     }
 
     const EWrongNFT: u64 = 0;
-    const EReceiptNotConfirmed: u64 = 1;
-    const ENonePending: u64 = 2;
+    const EPendingReceipt: u64 = 1;
+    const ENoPendingReceipt: u64 = 2;
     const EBoxNotFound: u64 = 3;
     const EItemNotFound: u64 = 4;
 
@@ -132,14 +132,14 @@ module knw_evos::history {
         receipt: BoxReceipt,
         _ctx: &mut TxContext
     ) {
-        assert!(traits::is_receipt_confirmed(&receipt), EReceiptNotConfirmed);
+        assert!(vector::length(&history.pending_receipts) == 0, EPendingReceipt);
         vector::push_back(&mut history.pending_receipts, receipt);
     }
     public(friend) fun pop_pending(
         history: &mut EvosHistory,
         ctx: &mut TxContext
     ): BoxReceipt {
-        assert!(has_pending(history, ctx), ENonePending);
+        assert!(has_pending(history, ctx), ENoPendingReceipt);
         vector::pop_back(&mut history.pending_receipts)
     }
     public fun has_pending(
