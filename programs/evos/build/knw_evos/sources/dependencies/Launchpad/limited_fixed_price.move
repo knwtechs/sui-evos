@@ -208,13 +208,10 @@ module ob_launchpad::limited_fixed_price {
         wallet: &mut Coin<FT>,
         ctx: &mut TxContext,
     ) {
-        let venue = listing::borrow_venue(listing, venue_id);
-        venue::assert_is_live(venue);
-        venue::assert_is_not_whitelisted(venue);
-
-        let nft =
-            buy_nft_<T, FT>(listing, venue_id, coin::balance_mut(wallet), ctx);
-        transfer::public_transfer(nft, tx_context::sender(ctx));
+        let (kiosk, _) =
+            ob_kiosk::ob_kiosk::new_for_address(tx_context::sender(ctx), ctx);
+        buy_nft_into_kiosk<T, FT>(listing, venue_id, wallet, &mut kiosk, ctx);
+        transfer::public_share_object(kiosk);
     }
 
     /// Buy NFT for non-whitelisted sale
@@ -296,6 +293,8 @@ module ob_launchpad::limited_fixed_price {
         balance: &mut Balance<FT>,
         ctx: &mut TxContext,
     ): T {
+        listing::apply_rebate<T, FT>(listing, balance);
+
         let market: &mut LimitedFixedPriceMarket<FT> = listing::market_internal_mut(
             listing, MarketKey {}, venue_id
         );
@@ -333,7 +332,7 @@ module ob_launchpad::limited_fixed_price {
         new_limit: u64,
         ctx: &mut TxContext,
     ) {
-        listing::assert_listing_admin(listing, ctx);
+        listing::assert_listing_admin_or_member(listing, ctx);
 
         let market: &mut LimitedFixedPriceMarket<FT> = listing::market_internal_mut(
             listing, MarketKey {}, venue_id
@@ -355,7 +354,7 @@ module ob_launchpad::limited_fixed_price {
         new_price: u64,
         ctx: &mut TxContext,
     ) {
-        listing::assert_listing_admin(listing, ctx);
+        listing::assert_listing_admin_or_member(listing, ctx);
 
         let market: &mut LimitedFixedPriceMarket<FT> = listing::market_internal_mut(
             listing, MarketKey {}, venue_id

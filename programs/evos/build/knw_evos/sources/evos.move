@@ -1,4 +1,5 @@
-/* Author: kunnow
+/* 
+ * Author: kunnow
  * Company: KNW Technologies FZCO
  * License: MIT
  * Module details:
@@ -12,16 +13,11 @@
  *      - (AdminCap) Add a new `Specie`
  *      - (friend) add_exp, sub_exp, add_gems, sub_gems
 */
-
-/*
-    User Experience:
-        1. Deposit (entry)
-        2a. Withdraw (exit)
-        2b. Reveal & Play
-*/
 module knw_evos::evos {
     
-    //friend knw_evos::evoscore;
+    // UPDATE 23/05/23
+    friend knw_evos::evoscore;
+    // END UPDATE
 
     use std::ascii;
     use std::option;
@@ -49,6 +45,7 @@ module knw_evos::evos {
     use nft_protocol::attributes::{Self, Attributes};
     use nft_protocol::display_info;
     use nft_protocol::mint_event;
+    //use nft_protocol::access_policy;
     use nft_protocol::mint_cap::{Self, MintCap};
 
     use ob_pseudorandom::pseudorandom;
@@ -74,13 +71,13 @@ module knw_evos::evos {
     struct EVOS has drop {}
     struct Witness has drop {}
     struct AdminCap has key, store { id: UID }
-    struct UpdateCap has key, store { id: UID }
 
     struct Evos has key, store {
         id: UID,
         index: u64,
         name: String,
         stage: String,
+        level: u32,
         species: String,
         xp: u32,
         gems: u32,
@@ -92,11 +89,12 @@ module knw_evos::evos {
         id: UID,
         inhold: u64,
         specs: vector<Specie>,
+        specs_tot_weight: u8,
         index: u64,
         slots: vector<ID>,
         version: u64,
         mint_cap: MintCap<Evos>,
-        evos_created: vector<ID>
+        evos_created: vector<ID>,
     }
 
     struct Slot has key, store {
@@ -124,6 +122,7 @@ module knw_evos::evos {
     const EU64Overflow: u64 = 9;
     const EEmptyStage: u64 = 10;
     const ESpeciesInvalidIndex: u64 = 11;
+    const ESpecsMaxWeightExceeded: u64 = 12;
 
     // ============== INIT ==============
     fun init(otw: EVOS, ctx: &mut TxContext) {
@@ -144,8 +143,11 @@ module knw_evos::evos {
         display::add(&mut display, string::utf8(b"name"), string::utf8(b"{name} #{index}"));
         display::add(&mut display, string::utf8(b"species"), string::utf8(b"{species}"));
         display::add(&mut display, string::utf8(b"stage"), string::utf8(b"{stage}"));
+        display::add(&mut display, string::utf8(b"level"), string::utf8(b"{level}"));
         display::add(&mut display, string::utf8(b"xp"), string::utf8(b"{xp}"));
         display::add(&mut display, string::utf8(b"gems"), string::utf8(b"{gems}"));
+        display::add(&mut display, string::utf8(b"attributes"), std::string::utf8(b"{attributes}"));
+        display::add(&mut display, string::utf8(b"image_url"), std::string::utf8(b"{url}"));
         display::add(&mut display, string::utf8(b"tags"), ob_display::from_vec(tags));
         display::update_version(&mut display);
         transfer::public_transfer(display, tx_context::sender(ctx));
@@ -153,18 +155,15 @@ module knw_evos::evos {
         collection::add_domain(
             dw,
             &mut collection,
-            // display_info::new(
-            //     string::utf8(b"ev0s"),
-            //     string::utf8(b"ev0s is an evolutionary NFT adventure that pushes Dynamic NFTs to their fullest potential on Sui"),
-            // ),
             display_info::new(
-                string::utf8(b"sobre"),
-                string::utf8(b"Tester fkers"),
+                string::utf8(b"ev0s"),
+                string::utf8(b"ev0s is an evolutionary NFT adventure that pushes Dynamic NFTs to their fullest potential on Sui"),
             ),
         );
 
         let creators = vector[COLLECTION_CREATOR];
-        let shares = vector[10_000]; // 2_000 BPS == 20%
+        let shares = vector[10_000]; // 10_000 BPS == 100%
+
         // Creators domain
         collection::add_domain(
             dw,
@@ -195,11 +194,11 @@ module knw_evos::evos {
 
         // Species
         let specs: vector<Specie> = vector<Specie>[
-            Specie {name: string::utf8(b"Fire"), weight: 1u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/fire.png"},
-            Specie {name: string::utf8(b"Rock"), weight: 1u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/rock.png"},
-            Specie {name: string::utf8(b"Water"), weight: 1u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/water.png"},
-            Specie {name: string::utf8(b"Forest"), weight: 1u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/forest.png"},
-            Specie {name: string::utf8(b"Gold"), weight: 1u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/gold.png"},
+            Specie {name: string::utf8(b"Gold"), weight: 5u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/gold.png"},
+            Specie {name: string::utf8(b"Forest"), weight: 20u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/forest.png"},
+            Specie {name: string::utf8(b"Water"), weight: 24u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/water.png"},
+            Specie {name: string::utf8(b"Rock"), weight: 25u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/rock.png"},
+            Specie {name: string::utf8(b"Fire"), weight: 26u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/fire.png"},
         ];
 
         let incubator = Incubator {
@@ -207,6 +206,7 @@ module knw_evos::evos {
             inhold: 0,
             index: 0,
             specs,
+            specs_tot_weight: 100,
             slots: vector::empty<ID>(),
             version: VERSION,
             mint_cap: mint_cap,
@@ -214,10 +214,6 @@ module knw_evos::evos {
         };
 
         transfer::transfer(AdminCap {
-            id: object::new(ctx),
-        }, tx_context::sender(ctx));
-        
-        transfer::transfer(UpdateCap {
             id: object::new(ctx),
         }, tx_context::sender(ctx));
 
@@ -341,6 +337,7 @@ module knw_evos::evos {
             gems: _,
             xp: _,
             stage: _,
+            level: _,
             url: _,
             attributes: _
         } = evos;
@@ -348,6 +345,165 @@ module knw_evos::evos {
     }
 
     // ==== ADMINCAP PROTECTED ====
+
+    /* UPDATE 23/05/23 */
+    public fun create_transfer_policy(
+        publisher: &Publisher,
+        ctx: &mut TxContext
+    ) {
+        let (transfer_policy, transfer_policy_cap) = ob_request::withdraw_request::init_policy<Evos>(publisher, ctx);
+        enforce_contract(&mut transfer_policy, &transfer_policy_cap);
+        transfer::public_share_object(transfer_policy);
+        transfer::public_transfer(transfer_policy_cap, tx_context::sender(ctx))
+    }
+    public(friend) fun confirm_withdrawal( 
+        request: &mut ob_request::withdraw_request::WithdrawRequest<Evos>,
+    ) {
+        ob_request::withdraw_request::add_receipt(request, &Witness {}); 
+    }
+    fun enforce_contract<T>( 
+        policy: &mut ob_request::request::Policy<T>, 
+        cap: &ob_request::request::PolicyCap, 
+    ) { 
+        ob_request::request::enforce_rule_no_state<T, Witness>(policy, cap); 
+    }
+    /* END UPDATE */
+
+    /* UPDATE 04/07/23 */
+    public fun create_borrow_policy(
+        publisher: &Publisher,
+        ctx: &mut TxContext
+    ) {
+        let (borrow_policy, borrow_policy_cap) = ob_request::borrow_request::init_policy<Evos>(publisher, ctx);
+        transfer::public_share_object(borrow_policy);
+        transfer::public_transfer(borrow_policy_cap, tx_context::sender(ctx))
+    }
+    public(friend) fun add_gems_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        amount: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let gems = gems(nft);
+        set_gems(nft, gems + amount, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun sub_gems_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        amount: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let gems = gems(nft);
+        assert!(gems >= amount, EInsufficientGems);
+        set_gems(nft, gems - amount, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun add_xp_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        amount: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let xp = xp(nft);
+        set_xp(nft, xp + amount, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun sub_xp_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        amount: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let xp = xp(nft);
+        assert!(xp >= amount, EInsufficientXp);
+        set_xp(nft, xp - amount, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun update_url_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        new_url: vector<u8>,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        update_url(nft, new_url, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun set_stage_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        stage: vector<u8>,
+        uri: vector<u8>,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        assert!(vector::length(&stage) > 0, EEmptyStage);
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        set_stage(nft, stage, uri, ctx);
+        //update_url(nft, uri);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun set_level_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        level: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        set_level(nft, level, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun set_attribute_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        name: vector<u8>,
+        value: vector<u8>,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let attributes = attributes::get_attributes_mut(&mut nft.attributes);
+        let key = ascii::string(name);
+        if(vec_map::contains(attributes, &key)){
+            if(vector::length(&value) == 1 && *vector::borrow(&value, 0) == 0u8){
+                remove_attribute(nft, name, ctx);
+            }else{
+                *vec_map::get_mut(attributes, &key) = ascii::string(value);
+            }
+        }else{
+            attributes::insert_attribute<Witness, Evos>(&mut nft.attributes, key, ascii::string(value));
+        };
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    /* END UPDATE */
+
 
     public entry fun migrate(
         _: &AdminCap,
@@ -368,8 +524,16 @@ module knw_evos::evos {
         url: vector<u8>,
         _ctx: &mut TxContext
     ) {
-        vector::push_back(&mut incubator.specs, create_specie(name, weight, url));
-        sort_array(&mut incubator.specs);
+        assert!(incubator.specs_tot_weight + weight < 255, ESpecsMaxWeightExceeded);
+        let i: u64 = 0;
+        while(vector::length(&incubator.specs) > i){
+            if(vector::borrow<Specie>(&incubator.specs, i).weight > weight){
+                vector::insert(&mut incubator.specs, create_specie(name, weight, url), i);
+                incubator.specs_tot_weight = incubator.specs_tot_weight + weight;
+                break
+            };
+            i = i+1;
+        }
     }
     public entry fun give_admin_cap(
         _: &AdminCap,
@@ -379,17 +543,10 @@ module knw_evos::evos {
         let cap = AdminCap {id: object::new(ctx)};
         transfer::public_transfer(cap, recipient)
     }
-    public entry fun give_update_cap(
-        _: &AdminCap,
-        recipient: address,
-        ctx: &mut TxContext
-    ){
-        let cap = UpdateCap {id: object::new(ctx)};
-        transfer::public_transfer(cap, recipient)
-    }
 
     // ==== GETTERS ====
 
+    // Incubator
     public fun index(incubator: &Incubator): u64 {
         incubator.index
     }
@@ -399,18 +556,24 @@ module knw_evos::evos {
     public fun inhold(incubator: &Incubator): u64 {
         incubator.inhold
     }
+
+    // Slot
     public fun revealable_at(slot: &Slot): u64 {
         slot.deposit_at + REVEAL_TIME
     }
     public fun owner(slot: &Slot): address {
         slot.owner
     }
+
+    // Specie
     public fun name(specie: &Specie): String {
         specie.name
     }
     public fun weight(specie: &Specie): u8 {
         specie.weight
     }
+
+    // Evos
     public fun url(evos: &Evos): Url {
         evos.url
     }
@@ -426,6 +589,11 @@ module knw_evos::evos {
     public fun gems(evos: &Evos): u32 {
         evos.gems
     }
+    public fun level(evos: &Evos): u32 {
+        evos.level
+    }
+
+    // Accessors
     public fun revealable_in(
         deposit_ms: u64,
         clock: &Clock
@@ -453,7 +621,7 @@ module knw_evos::evos {
     ): vector<ID> {
         incubator.slots
     }
-    public entry fun get_slot_deposit_at(
+    public entry fun get_slot_revealable_at(
         nft_id: ID,
         incubator: &Incubator,
         _ctx: &mut TxContext
@@ -467,7 +635,6 @@ module knw_evos::evos {
     ): address {
         owner(ofield::borrow(&incubator.id, nft_id))
     }
-
 
     // ==== TRANSFER REQUEST ====
 
@@ -507,45 +674,46 @@ module knw_evos::evos {
         evos: &mut Evos,
         amount: u32,
         _ctx: &mut TxContext
-    ): u32 {
+    ) {
         //assert!(tx_context::sender(ctx) == incubator.admin, ENotOwner);
-        assert!(evos.gems >= amount, EInsufficientGems);
-        evos.gems = evos.gems - amount;
-        evos.gems
+        //assert!(evos.gems >= amount, EInsufficientGems);
+        evos.gems = amount;
     }
     public(friend) fun set_xp(
         evos: &mut Evos,
         amount: u32,
         _ctx: &mut TxContext
-    ): u32 {
+    ) {
         //assert!(tx_context::sender(ctx) == incubator.admin, ENotOwner);
-        assert!(amount < MAX_U32, EMaxXpExceeded);
+        //assert!(amount < MAX_U32, EMaxXpExceeded);
         evos.xp = amount;
-        evos.xp
     }
     public(friend) fun update_url(
         evos: &mut Evos,
         new_url: vector<u8>,
         _ctx: &mut TxContext
     ) {
-        //assert!(tx_context::sender(ctx) == incubator.admin, ENotOwner);
         evos.url = url::new_unsafe_from_bytes(new_url);
     }
     public(friend) fun set_stage(
         evos: &mut Evos,
         stage: vector<u8>,
         uri: vector<u8>,
-        xp: u32,
-        _ctx: &mut TxContext
+        ctx: &mut TxContext
     ) {
         assert!(vector::length(&stage) > 0, EEmptyStage);
-        assert!(xp(evos) >= xp, EInsufficientXp);
-
-        evos.xp = evos.xp - xp;
         evos.stage = string::utf8(stage);
-        evos.url = url::new_unsafe_from_bytes(uri);
+        update_url(evos, uri, ctx);
     }
-    // It add an attribute with name=name and value=value
+    public(friend) fun set_level(
+        evos: &mut Evos,
+        level: u32,
+        _ctx: &mut TxContext
+    ) {
+        evos.level = level
+    }
+
+    // It add an attribute with name=name and value=value ( update if already exists an attribute with key=name )
     // It removes an existings attribute if value=[0u8]
     public(friend) fun set_attribute(
         evos: &mut Evos,
@@ -566,27 +734,27 @@ module knw_evos::evos {
         }
     }
 
-    fun remove_attribute(
-        evos: &mut Evos,
-        name: vector<u8>,
-        _ctx: &mut TxContext
-    ) {
-        let key = ascii::string(name);
-        let attributes = attributes::get_attributes(&evos.attributes);
-        if(vec_map::contains(attributes, &key)){
-            attributes::remove_attribute<Witness, Evos>(&mut evos.attributes, &key);
-        };
-    }
-
     public fun has_attribute(
-        evos: &mut Evos,
+        evos: &Evos,
         name: vector<u8>,
-        _ctx: &mut TxContext
     ): bool {
         vec_map::contains(
             attributes::get_attributes(&evos.attributes),
             &ascii::string(name)
         )
+    }
+
+    public fun get_attribute(
+        evos: &Evos,
+        name: vector<u8>
+    ): ascii::String {
+        let attributes = attributes::get_attributes(&evos.attributes);
+        let name = &ascii::string(name);
+        let x = vec_map::get(
+            attributes,
+            name
+        );
+        *x
     }
 
     // ==== ORDERBOOK ====
@@ -635,15 +803,9 @@ module knw_evos::evos {
         let nonce = vector::empty();
         vector::append(&mut nonce, sui::bcs::to_bytes(&incubator.index));
         let contract_commitment = pseudorandom::rand_no_counter(nonce, ctx);
-        let index = select(vector::length(&incubator.specs), &contract_commitment);
-        let weight = select(255u64, &contract_commitment);
-        assert!(index < vector::length(&incubator.specs), ESpeciesInvalidIndex);
-
-        let specie: &Specie = vector::borrow<Specie>(&incubator.specs, index);
-        while(weight < (specie.weight as u64)){
-            let index = select(vector::length(&incubator.specs), &contract_commitment);
-            specie = vector::borrow<Specie>(&incubator.specs, index);
-        };
+        let rng = select((incubator.specs_tot_weight as u64), &contract_commitment);
+        
+        let specie = draw_specie(&incubator.specs, rng);
 
         // Create Evos
         let evos = Evos {
@@ -652,12 +814,13 @@ module knw_evos::evos {
             name: string::utf8(b"Evos"),
             url: url::new_unsafe_from_bytes(specie.url),
             stage: string::utf8(b"Egg"),
+            level: 1,
             species: specie.name,
             gems: 0,
             xp: 0,
             attributes: attributes::from_vec(
-                vector[ascii::string(b"gems"), ascii::string(b"xp"), ascii::string(b"species"), ascii::string(b"stage")],
-                vector[ascii::string(b"0"), ascii::string(b"0"), string::to_ascii(specie.name), ascii::string(b"Egg")]
+                vector[ascii::string(b"gems"), ascii::string(b"xp"), ascii::string(b"species"), ascii::string(b"stage"), ascii::string(b"level")],
+                vector[ascii::string(b"0"), ascii::string(b"0"), string::to_ascii(specie.name), ascii::string(b"Egg"), ascii::string(b"1")]
             )
         };
 
@@ -667,6 +830,8 @@ module knw_evos::evos {
             mint_cap::collection_id(&incubator.mint_cap),
             &evos,
         );
+
+        mint_cap::increment_supply(&mut incubator.mint_cap, 1);
 
         evos
     }
@@ -680,8 +845,8 @@ module knw_evos::evos {
         let nft_id = object::id(&nft);
         let (kiosk, _) = ob_kiosk::new_for_address(receiver, ctx);
         ob_kiosk::deposit(&mut kiosk, nft, ctx);
-        ob_kiosk::auth_transfer(&mut kiosk, nft_id, COLLECTION_ADMIN, ctx);
-        ob_kiosk::auth_transfer(&mut kiosk, nft_id, COLLECTION_DEPLOYER, ctx);
+        // ob_kiosk::auth_transfer(&mut kiosk, nft_id, COLLECTION_ADMIN, ctx);
+        // ob_kiosk::auth_transfer(&mut kiosk, nft_id, COLLECTION_DEPLOYER, ctx);
         transfer::public_share_object(kiosk);
         register_new_evos(incubator, nft_id);
     }
@@ -694,588 +859,780 @@ module knw_evos::evos {
         let mod  = random % (bound as u256);
         (mod as u64)
     }
-    fun sort_array(arr: &mut vector<Specie>) {
-        let n = vector::length(arr);
-        let _swapped: bool = false;
+    fun draw_specie(species: &vector<Specie>, rng: u64): &Specie {
+        let cumulativeWeight: u8 = 0;
         let i: u64 = 0;
-        let j: u64 = 0;
-        while(i < n) {
-            _swapped = false;
-            while(j < n - i - 1) {
-                let a = vector::borrow<Specie>(arr, j);
-                let b = vector::borrow<Specie>(arr, j + 1);
-                if(a.weight > b.weight) {
-                    vector::swap(arr, j, j + 1);
-                    _swapped = true;
-                };
-                j = j+1;
+        while (vector::length(species) > i) {
+            let specie = vector::borrow<Specie>(species, i);
+            cumulativeWeight = cumulativeWeight + specie.weight;
+            if (rng <= (cumulativeWeight as u64)) {
+                return specie
             };
-            if (!_swapped) {
-                break
-            };
-            i = i + 1;
-        }
+            i = i+1;
+        };
+        vector::borrow<Specie>(species, vector::length(species) - 1)
     }
     fun register_new_evos(incubator: &mut Incubator, id: ID) {
         vector::push_back<ID>(&mut incubator.evos_created, id);
     }
-
-    #[test_only]
-    use sui::test_scenario::{Self, ctx};
-    #[test_only]
-    use nft_protocol::collection::Collection;
-    // #[test_only]
-    // use knw_genesis::evosgenesisegg::{MintTracker};
-    #[test_only]
-    use sui::kiosk::{Kiosk};
-    #[test_only]
-    use ob_request::withdraw_request::{Self};
-
-    #[test_only]
-    const CREATOR: address = @0xA1C04;
-    #[test_only]
-    const CLOCK: address = @0x6;
-    
-    #[test_only]
-    fun create_clock(ctx: &mut TxContext) {
-        let clock = clock::create_for_testing(ctx);
-        clock::share_for_testing(clock);
-    }
-
-    #[test_only]
-    public entry fun mint_egg_to_recipient(
-        tracker: &mut MintTracker,
-        recipient: address,
-        ctx: &mut TxContext
+    fun remove_attribute(
+        evos: &mut Evos,
+        name: vector<u8>,
+        _ctx: &mut TxContext
     ) {
-        let egg = evosgenesisegg::mint_for_test(tracker, ctx);
-        transfer::public_transfer(egg, recipient)
-    }
-
-    #[test]
-    fun creating_a_clock_and_incrementing_it() {
-        let ts = test_scenario::begin(@0x1);
-        let ctx = test_scenario::ctx(&mut ts);
-
-        create_clock(ctx);
-        test_scenario::next_tx(&mut ts, CREATOR);
-
-        let clock = test_scenario::take_shared<Clock>(&ts);
-
-        clock::increment_for_testing(&mut clock, 20);
-        clock::increment_for_testing(&mut clock, 22);
-        assert!(clock::timestamp_ms(&clock) == 42, 0);
-
-        test_scenario::return_shared(clock);
-        test_scenario::end(ts);
-    }
-
-    #[test]
-    fun it_inits() {
-        let scenario = test_scenario::begin(CREATOR);
-
-        init(EVOS {}, ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        assert!(test_scenario::has_most_recent_shared<Incubator>(), 1);
-
-        let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
-        assert!(vector::length<Specie>(&incubator.specs) == 5, 6);
-
-        assert!(test_scenario::has_most_recent_shared<Collection<Evos>>(), 0);
-
-        test_scenario::return_shared(incubator);
-        test_scenario::next_tx(&mut scenario, CREATOR);
-        test_scenario::end(scenario);
-    }
-
-    #[test]
-    fun it_deposit() {
-
-        let scenario = test_scenario::begin(CREATOR);
-        create_clock(ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        init(EVOS {}, ctx(&mut scenario));
-        evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        let tracker = test_scenario::take_shared<MintTracker>(&scenario);
-        mint_egg_to_recipient(&mut tracker, CREATOR, ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-        test_scenario::return_shared(tracker);
-
-        let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
-        let clock = test_scenario::take_shared<Clock>(&scenario);
-        let egg = test_scenario::take_from_address<EvosGenesisEgg>(
-            &scenario,
-            CREATOR,
-        );
-
-        deposit(
-            &mut incubator,
-            egg,
-            &clock,
-            ctx(&mut scenario)
-        );
-        test_scenario::next_tx(&mut scenario, CREATOR);
-        
-        assert!(vector::length(&incubator.slots) == 1, 10);
-        test_scenario::return_shared(incubator);
-        test_scenario::return_shared(clock);
-        test_scenario::next_tx(&mut scenario, CREATOR);
-        test_scenario::end(scenario);
-
-        // let bag = test_scenario::take_child_object<Marketplace, Bag>(scenario, mkp);
-        // test_scenario::return_to_sender(scenario, bag);
-    }
-
-    #[test]
-    fun it_withdraw() {
-
-        let scenario = test_scenario::begin(CREATOR);
-        create_clock(ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        init(EVOS {}, ctx(&mut scenario)); // it mints 1 Egg to sender
-        evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        let tracker = test_scenario::take_shared<MintTracker>(&scenario);
-        mint_egg_to_recipient(&mut tracker, CREATOR, ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-        test_scenario::return_shared(tracker);
-
-        let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
-        let clock = test_scenario::take_shared<Clock>(&scenario);
-        let egg = test_scenario::take_from_address<EvosGenesisEgg>(
-            &scenario,
-            CREATOR,
-        );
-
-        deposit(
-            &mut incubator,
-            egg,
-            &clock,
-            ctx(&mut scenario)
-        );
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        clock::increment_for_testing(&mut clock, 5000);
-        let slots_uids = &incubator.slots;
-
-        withdraw(
-            &mut incubator,
-            *vector::borrow<ID>(slots_uids, 0),
-            ctx(&mut scenario)
-        );
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        let egg = test_scenario::take_from_address<EvosGenesisEgg>(
-            &scenario,
-            CREATOR,
-        );
-        
-        test_scenario::return_to_address(CREATOR, egg);
-        test_scenario::return_shared(incubator);
-        test_scenario::return_shared(clock);
-        test_scenario::next_tx(&mut scenario, CREATOR);
-        test_scenario::end(scenario);
-
-        // let bag = test_scenario::take_child_object<Marketplace, Bag>(scenario, mkp);
-        // test_scenario::return_to_sender(scenario, bag);
-    }
-
-    #[test]
-    fun it_reveal() {
-
-        let scenario = test_scenario::begin(CREATOR);
-        create_clock(ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        init(EVOS {}, ctx(&mut scenario));
-        evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        let tracker = test_scenario::take_shared<MintTracker>(&scenario);
-        mint_egg_to_recipient(&mut tracker, CREATOR, ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
-        let clock = test_scenario::take_shared<Clock>(&scenario);
-        let egg = test_scenario::take_from_address<EvosGenesisEgg>(
-            &scenario,
-            CREATOR,
-        );
-        //let egg_id = object::id(&egg);
-
-        deposit(
-            &mut incubator,
-            egg,
-            &clock,
-            ctx(&mut scenario)
-        );
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        clock::increment_for_testing(&mut clock, REVEAL_TIME);
-
-        let slots_uids = &incubator.slots;
-        reveal(
-            &mut incubator,
-            &mut tracker,
-            *vector::borrow<ID>(slots_uids, 0),
-            &clock,
-            ctx(&mut scenario)
-        );
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        let evos = test_scenario::take_shared<Kiosk>(
-            &scenario
-        );
-        test_scenario::return_shared(evos);
-        assert!(index(&incubator) == 1, 5);
-
-
-        test_scenario::return_shared(incubator);
-        test_scenario::return_shared(clock);
-        test_scenario::return_shared(tracker);
-
-        test_scenario::next_tx(&mut scenario, CREATOR);
-        test_scenario::end(scenario);
-
-        // let bag = test_scenario::take_child_object<Marketplace, Bag>(scenario, mkp);
-        // test_scenario::return_to_sender(scenario, bag);
-    }
-
-    #[test]
-    fun it_add_specis() {
-
-        let scenario = test_scenario::begin(CREATOR);
-
-        init(EVOS {}, ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
-        let admin_cap = test_scenario::take_from_address<AdminCap>(&scenario, CREATOR);
-
-        add_specie(
-            &admin_cap,
-            &mut incubator,
-            string::utf8(b"TEST"),
-            1,
-            b"https://test-specie.jpg",
-            ctx(&mut scenario)
-        );
-        assert!(vector::length(&incubator.specs) == 6, 11);
-
-        test_scenario::return_shared(incubator);
-
-        test_scenario::return_to_address(CREATOR, admin_cap);
-
-        test_scenario::next_tx(&mut scenario, CREATOR);
-        test_scenario::end(scenario);
-    }
-
-    #[test]
-    fun it_sort_specis() {
-
-        let scenario = test_scenario::begin(CREATOR);
-
-        init(EVOS {}, ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
-        let admin_cap = test_scenario::take_from_address<AdminCap>(&scenario, CREATOR);
-
-        add_specie(
-            &admin_cap,
-            &mut incubator,
-            string::utf8(b"TEST"),
-            5,
-            b"https://test-specie.jpg",
-            ctx(&mut scenario)
-        );
-        assert!(vector::length(&incubator.specs) == 6, 11);
-
-        add_specie(
-            &admin_cap,
-            &mut incubator,
-            string::utf8(b"TEST"),
-            3,
-            b"https://test-specie.jpg",
-            ctx(&mut scenario)
-        );
-        assert!(vector::length(&incubator.specs) == 7, 12);
-
-        add_specie(
-            &admin_cap,
-            &mut incubator,
-            string::utf8(b"TEST"),
-            4,
-            b"https://test-specie.jpg",
-            ctx(&mut scenario)
-        );
-        assert!(vector::length(&incubator.specs) == 8, 13);
-
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        let specs: &vector<Specie> = specs(&incubator);
-        let i: u64 = 0;
-        let prev: u8 = 0;
-        while(i < vector::length(specs)){
-            let s = vector::borrow<Specie>(specs, i);
-            assert!(s.weight >= prev, 14);
-            prev = s.weight;
-            i = i+1;
+        let key = ascii::string(name);
+        let attributes = attributes::get_attributes(&evos.attributes);
+        if(vec_map::contains(attributes, &key)){
+            attributes::remove_attribute<Witness, Evos>(&mut evos.attributes, &key);
         };
-
-        test_scenario::return_shared(incubator);
-
-        test_scenario::return_to_address(CREATOR, admin_cap);
-
-        test_scenario::next_tx(&mut scenario, CREATOR);
-        test_scenario::end(scenario);
     }
 
-    #[test]
-    fun deny_add_specis() {
-        
-        let unauth_user: address = @0xABC; 
-        let scenario = test_scenario::begin(CREATOR);
+    #[test_only]
+    public(friend) fun init_for_test(
+        ctx: &mut TxContext
+    ){
+        let otw = EVOS {};
+        let sender = tx_context::sender(ctx);
 
-        init(EVOS {}, ctx(&mut scenario));
-        evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, unauth_user);
-
-        let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
-        let admin_cap = test_scenario::take_from_address<AdminCap>(&scenario, CREATOR);
-
-        test_scenario::next_tx(&mut scenario, unauth_user);
-
-        add_specie(
-            &admin_cap,
-            &mut incubator,
-            string::utf8(b"TEST"),
-            1,
-            b"https://test-specie.jpg",
-            ctx(&mut scenario)
-        );
-        assert!(vector::length(&incubator.specs) == 6, 11);
-
-        test_scenario::return_shared(incubator);
-        test_scenario::return_to_address(CREATOR, admin_cap);
-
-        test_scenario::next_tx(&mut scenario, CREATOR);
-        test_scenario::end(scenario);
-    }
-
-    #[test]
-    fun incubator_stats_are_correct() {
-
-        let scenario = test_scenario::begin(CREATOR);
-        let user_a: address = @0xA;
-        let user_b: address = @0xB;
-
-        create_clock(ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        //evosgenesisegg::init(EVOSGENESISEGG, ctx(&mut scenario));
-        init(EVOS {}, ctx(&mut scenario));
-        evosgenesisegg::init_for_test(knw_genesis::evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        let tracker = test_scenario::take_shared<MintTracker>(&scenario);
-
-        mint_egg_to_recipient(&mut tracker, CREATOR, ctx(&mut scenario));
-        mint_egg_to_recipient(&mut tracker, user_a, ctx(&mut scenario));
-        mint_egg_to_recipient(&mut tracker, user_b, ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, user_a);
-
-        let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
-        let clock = test_scenario::take_shared<Clock>(&scenario);
-
-        let egg_a = test_scenario::take_from_address<EvosGenesisEgg>(
-            &scenario,
-            user_a,
+        // Init Collection & MintCap with unlimited supply
+        let (collection, mint_cap) = collection::create_with_mint_cap<EVOS, Evos>(
+            &otw, option::none(), ctx
         );
 
-        deposit(
-            &mut incubator,
-            egg_a,
-            &clock,
-            ctx(&mut scenario)
-        );
-        test_scenario::next_tx(&mut scenario, user_b);
-
-        let egg_b = test_scenario::take_from_address<EvosGenesisEgg>(
-            &scenario,
-            user_b,
-        );
-        deposit(
-            &mut incubator,
-            egg_b,
-            &clock,
-            ctx(&mut scenario)
-        );
-        test_scenario::next_tx(&mut scenario, user_a);
-
-        clock::increment_for_testing(&mut clock, REVEAL_TIME);
-        let slots_uids = &incubator.slots;
-
-        reveal(
-            &mut incubator,
-            &mut tracker,
-            *vector::borrow<ID>(slots_uids, 0),
-            &clock,
-            ctx(&mut scenario)
-        );
-        test_scenario::next_tx(&mut scenario, CREATOR);
-        
-        //debug::print(&string::utf8(b"Revealed"));
-
-        let evos = test_scenario::take_shared<Kiosk>(
-            &scenario
-        );
-        test_scenario::return_shared<Kiosk>(evos);
-
-        assert!(index(&incubator) == 1, 5);
-        assert!(inhold(&incubator) == 1, 7);
-
-        test_scenario::return_shared(tracker);
-        test_scenario::return_shared(incubator);
-        test_scenario::return_shared(clock);
-
-        test_scenario::next_tx(&mut scenario, CREATOR);
-        test_scenario::end(scenario);
-
-        // let bag = test_scenario::take_child_object<Marketplace, Bag>(scenario, mkp);
-        // test_scenario::return_to_sender(scenario, bag);
-    }
-
-    #[test]
-    fun test_kiosk_update_evos_xp() {
-
-        let scenario = test_scenario::begin(CREATOR);
-        let depositer = @0xBBB0AF;
-
-        create_clock(ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        init(EVOS {}, ctx(&mut scenario));
-        evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        let tracker = test_scenario::take_shared<MintTracker>(&scenario);
-        mint_egg_to_recipient(&mut tracker, depositer, ctx(&mut scenario));
-
-        test_scenario::next_tx(&mut scenario, depositer);
-
-        let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
-        let clock = test_scenario::take_shared<Clock>(&scenario);
-        let egg = test_scenario::take_from_address<EvosGenesisEgg>(
-            &scenario,
-            depositer,
-        );
-        deposit(
-            &mut incubator,
-            egg,
-            &clock,
-            ctx(&mut scenario)
-        );
-        test_scenario::next_tx(&mut scenario, depositer);
-
-        clock::increment_for_testing(&mut clock, REVEAL_TIME);
-
-        let slots_uids = &incubator.slots;
-
-        reveal(
-            &mut incubator,
-            &mut tracker,
-            *vector::borrow<ID>(slots_uids, 0),
-            &clock,
-            ctx(&mut scenario)
-        );
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        // Withdraw evos from kiosk
-        assert!(test_scenario::has_most_recent_shared<Kiosk>(), 0);
-        let kiosk = test_scenario::take_shared<Kiosk>(
-            &scenario,
-        );
-
-        let publisher = sui::package::claim(EVOS {}, ctx(&mut scenario));
-        let (tx_policy, policy_cap) = withdraw_request::init_policy<Evos>(&publisher, ctx(&mut scenario));
-
-        let evos_array = all_evos_ids(&incubator);
-        assert!(vector::length(&evos_array) > 0, 0);
-        let nft_id: ID = get_evos_id_at(&incubator, 0);
-        let (nft, request) = ob_kiosk::withdraw_nft_signed<Evos>(
-            &mut kiosk,
-            nft_id,
-            ctx(&mut scenario)
-        );
-        withdraw_request::confirm<Evos>(request, &tx_policy);
-
-        transfer::public_share_object(tx_policy);
-        transfer::public_transfer(policy_cap, depositer);
-        transfer::public_transfer(publisher, depositer);
-
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        // Deposit evos back into the kiosk
-        let update_cap = test_scenario::take_from_address<UpdateCap>(&mut scenario, CREATOR);
-        set_xp(&mut nft, 20u32, ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        assert!(xp(&nft) == 20u32, 15);
-        //ob_kiosk::assert_listed(&mut kiosk, nft_id);
-
-        //test_scenario::next_tx(&mut scenario, CREATOR);
-
-        ob_kiosk::deposit(&mut kiosk, nft, ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        ob_kiosk::assert_not_listed(&mut kiosk, nft_id);
-        ob_kiosk::assert_not_exclusively_listed(&mut kiosk, nft_id);
-
-        assert!(index(&incubator) == 1, 5);
-        
-        test_scenario::return_shared(incubator);
-        test_scenario::return_shared(clock);
-        test_scenario::return_shared(kiosk);
-        test_scenario::return_shared(tracker);
-        
-        test_scenario::return_to_address(CREATOR, update_cap);
-        test_scenario::next_tx(&mut scenario, CREATOR);
-        test_scenario::end(scenario);
-    }
-
-    #[test]
-    fun test_species_rarity() {
-
-        let scenario = test_scenario::begin(CREATOR);
-
-        init(EVOS {}, ctx(&mut scenario));
-        //evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
-        test_scenario::next_tx(&mut scenario, CREATOR);
-
-        let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
-
-        let i: u64 = 0;
+        // Init Publisher
+        let publisher = sui::package::claim(otw, ctx);
         let dw = witness::from_witness(Witness {});
-        while(i < 10u64){
-            let egg = create_evos(dw, &mut incubator, ctx(&mut scenario));
-            // std::debug::print<String>(&species(&egg));
-            transfer::public_share_object(egg);
-            i = i+1;
+
+        // Init Display
+        let tags = vector[tags::art(), tags::collectible()];
+        let display = display::new<Evos>(&publisher, ctx);
+        display::add(&mut display, string::utf8(b"name"), string::utf8(b"{name} #{index}"));
+        display::add(&mut display, string::utf8(b"species"), string::utf8(b"{species}"));
+        display::add(&mut display, string::utf8(b"stage"), string::utf8(b"{stage}"));
+        display::add(&mut display, string::utf8(b"level"), string::utf8(b"{level}"));
+        display::add(&mut display, string::utf8(b"xp"), string::utf8(b"{xp}"));
+        display::add(&mut display, string::utf8(b"gems"), string::utf8(b"{gems}"));
+        display::add(&mut display, string::utf8(b"attributes"), std::string::utf8(b"{attributes}"));
+        display::add(&mut display, string::utf8(b"image_url"), std::string::utf8(b"{url}"));
+        display::add(&mut display, string::utf8(b"tags"), ob_display::from_vec(tags));
+        display::update_version(&mut display);
+        transfer::public_transfer(display, tx_context::sender(ctx));
+
+        collection::add_domain(
+            dw,
+            &mut collection,
+            display_info::new(
+                string::utf8(b"ev0s"),
+                string::utf8(b"ev0s is an evolutionary NFT adventure that pushes Dynamic NFTs to their fullest potential on Sui"),
+            ),
+        );
+
+        let creators = vector[COLLECTION_CREATOR];
+        let shares = vector[10_000]; // 10_000 BPS == 100%
+
+        // Creators domain
+        collection::add_domain(
+            dw,
+            &mut collection,
+            creators::new(utils::vec_set_from_vec(&creators)),
+        );
+
+        let shares = utils::from_vec_to_map(creators, shares);
+        royalty_strategy_bps::create_domain_and_add_strategy(
+            dw, &mut collection, royalty::from_shares(shares, ctx), 500, ctx,
+        );
+
+        // === TRANSFER POLICIES ===
+
+        // Creates a new policy and registers an allowlist rule to it.
+        // Therefore now to finish a transfer, the allowlist must be included
+        // in the chain.
+        let (transfer_policy, transfer_policy_cap) = transfer_request::init_policy<Evos>(&publisher, ctx);
+
+        royalty_strategy_bps::enforce(&mut transfer_policy, &transfer_policy_cap);
+        transfer_allowlist::enforce(&mut transfer_policy, &transfer_policy_cap);
+
+        // P2P Transfers are a separate transfer workflow and therefore require a
+        // separate policy
+        let (p2p_policy, p2p_policy_cap) = transfer_request::init_policy<Evos>(&publisher, ctx);
+
+        p2p_list::enforce(&mut p2p_policy, &p2p_policy_cap);
+
+        // Species
+        let specs: vector<Specie> = vector<Specie>[
+            Specie {name: string::utf8(b"Gold"), weight: 5u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/gold.png"},
+            Specie {name: string::utf8(b"Forest"), weight: 20u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/forest.png"},
+            Specie {name: string::utf8(b"Water"), weight: 24u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/water.png"},
+            Specie {name: string::utf8(b"Rock"), weight: 25u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/rock.png"},
+            Specie {name: string::utf8(b"Fire"), weight: 26u8, url: b"https://knw-gp.s3.eu-north-1.amazonaws.com/species/fire.png"},
+        ];
+
+        let incubator = Incubator {
+            id: object::new(ctx),
+            inhold: 0,
+            index: 0,
+            specs,
+            specs_tot_weight: 100,
+            slots: vector::empty<ID>(),
+            version: VERSION,
+            mint_cap: mint_cap,
+            evos_created: vector::empty<ID>()
         };
 
-        test_scenario::next_tx(&mut scenario, CREATOR);
+        transfer::transfer(AdminCap {
+            id: object::new(ctx),
+        }, tx_context::sender(ctx));
 
-        test_scenario::return_shared(incubator);
-
-        test_scenario::next_tx(&mut scenario, CREATOR);
-        test_scenario::end(scenario);
+        transfer::share_object(incubator);
+        transfer::public_transfer(publisher, sender);
+        transfer::public_transfer(transfer_policy_cap, sender);
+        transfer::public_transfer(p2p_policy_cap, sender);
+        transfer::public_share_object(collection);
+        transfer::public_share_object(transfer_policy);
+        transfer::public_share_object(p2p_policy);
     }
+
+    #[test_only]
+    public(friend) fun create_kiosk_with_evos_for_test(
+        incubator: &mut Incubator,
+        receiver: address,
+        ctx: &mut TxContext
+    ){
+        let dw = witness::from_witness(Witness {});
+        let nft = create_evos(dw, incubator, ctx);
+        let nft_id = object::id(&nft);
+        let (kiosk, _) = ob_kiosk::new_for_address(receiver, ctx);
+        ob_kiosk::deposit(&mut kiosk, nft, ctx);
+        transfer::public_share_object(kiosk);
+        register_new_evos(incubator, nft_id);
+    }
+
+    // #[test_only]
+    // use sui::test_scenario::{Self, ctx};
+    // #[test_only]
+    // use nft_protocol::collection::Collection;
+    // // #[test_only]
+    // // use knw_genesis::evosgenesisegg::{MintTracker};
+    // #[test_only]
+    // use sui::kiosk::{Kiosk};
+    // #[test_only]
+    // use ob_request::withdraw_request::{Self};
+
+    // #[test_only]
+    // const CREATOR: address = @0xA1C04;
+    // #[test_only]
+    // const CLOCK: address = @0x6;
+
+    // #[test_only]
+    // fun create_clock(ctx: &mut TxContext) {
+    //     let clock = clock::create_for_testing(ctx);
+    //     clock::share_for_testing(clock);
+    // }
+
+    // #[test_only]
+    // public entry fun mint_egg_to_recipient(
+    //     tracker: &mut MintTracker,
+    //     recipient: address,
+    //     ctx: &mut TxContext
+    // ) {
+    //     let egg = evosgenesisegg::mint_for_test(tracker, ctx);
+    //     transfer::public_transfer(egg, recipient)
+    // }
+
+    // #[test]
+    // fun creating_a_clock_and_incrementing_it() {
+    //     let ts = test_scenario::begin(@0x1);
+    //     let ctx = test_scenario::ctx(&mut ts);
+
+    //     create_clock(ctx);
+    //     test_scenario::next_tx(&mut ts, CREATOR);
+
+    //     let clock = test_scenario::take_shared<Clock>(&ts);
+
+    //     clock::increment_for_testing(&mut clock, 20);
+    //     clock::increment_for_testing(&mut clock, 22);
+    //     assert!(clock::timestamp_ms(&clock) == 42, 0);
+
+    //     test_scenario::return_shared(clock);
+    //     test_scenario::end(ts);
+    // }
+
+    // #[test]
+    // fun it_inits() {
+    //     let scenario = test_scenario::begin(CREATOR);
+
+    //     init(EVOS {}, ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     assert!(test_scenario::has_most_recent_shared<Incubator>(), 1);
+
+    //     let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
+    //     assert!(vector::length<Specie>(&incubator.specs) == 5, 6);
+
+    //     assert!(test_scenario::has_most_recent_shared<Collection<Evos>>(), 0);
+
+    //     test_scenario::return_shared(incubator);
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::end(scenario);
+    // }
+
+    // #[test]
+    // fun it_deposit() {
+
+    //     let scenario = test_scenario::begin(CREATOR);
+    //     create_clock(ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     init(EVOS {}, ctx(&mut scenario));
+    //     evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let tracker = test_scenario::take_shared<MintTracker>(&scenario);
+    //     mint_egg_to_recipient(&mut tracker, CREATOR, ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::return_shared(tracker);
+
+    //     let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
+    //     let clock = test_scenario::take_shared<Clock>(&scenario);
+    //     let egg = test_scenario::take_from_address<EvosGenesisEgg>(
+    //         &scenario,
+    //         CREATOR,
+    //     );
+
+    //     deposit(
+    //         &mut incubator,
+    //         egg,
+    //         &clock,
+    //         ctx(&mut scenario)
+    //     );
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+        
+    //     assert!(vector::length(&incubator.slots) == 1, 10);
+    //     test_scenario::return_shared(incubator);
+    //     test_scenario::return_shared(clock);
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::end(scenario);
+
+    //     // let bag = test_scenario::take_child_object<Marketplace, Bag>(scenario, mkp);
+    //     // test_scenario::return_to_sender(scenario, bag);
+    // }
+
+    // #[test]
+    // fun it_withdraw() {
+
+    //     let scenario = test_scenario::begin(CREATOR);
+    //     create_clock(ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     init(EVOS {}, ctx(&mut scenario)); // it mints 1 Egg to sender
+    //     evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let tracker = test_scenario::take_shared<MintTracker>(&scenario);
+    //     mint_egg_to_recipient(&mut tracker, CREATOR, ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::return_shared(tracker);
+
+    //     let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
+    //     let clock = test_scenario::take_shared<Clock>(&scenario);
+    //     let egg = test_scenario::take_from_address<EvosGenesisEgg>(
+    //         &scenario,
+    //         CREATOR,
+    //     );
+
+    //     deposit(
+    //         &mut incubator,
+    //         egg,
+    //         &clock,
+    //         ctx(&mut scenario)
+    //     );
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     clock::increment_for_testing(&mut clock, 5000);
+    //     let slots_uids = &incubator.slots;
+
+    //     withdraw(
+    //         &mut incubator,
+    //         *vector::borrow<ID>(slots_uids, 0),
+    //         ctx(&mut scenario)
+    //     );
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let egg = test_scenario::take_from_address<EvosGenesisEgg>(
+    //         &scenario,
+    //         CREATOR,
+    //     );
+        
+    //     test_scenario::return_to_address(CREATOR, egg);
+    //     test_scenario::return_shared(incubator);
+    //     test_scenario::return_shared(clock);
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::end(scenario);
+
+    //     // let bag = test_scenario::take_child_object<Marketplace, Bag>(scenario, mkp);
+    //     // test_scenario::return_to_sender(scenario, bag);
+    // }
+
+    // #[test]
+    // fun it_reveal() {
+
+    //     let scenario = test_scenario::begin(CREATOR);
+    //     create_clock(ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     init(EVOS {}, ctx(&mut scenario));
+    //     evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let tracker = test_scenario::take_shared<MintTracker>(&scenario);
+    //     mint_egg_to_recipient(&mut tracker, CREATOR, ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
+    //     let clock = test_scenario::take_shared<Clock>(&scenario);
+    //     let egg = test_scenario::take_from_address<EvosGenesisEgg>(
+    //         &scenario,
+    //         CREATOR,
+    //     );
+    //     //let egg_id = object::id(&egg);
+
+    //     deposit(
+    //         &mut incubator,
+    //         egg,
+    //         &clock,
+    //         ctx(&mut scenario)
+    //     );
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     clock::increment_for_testing(&mut clock, REVEAL_TIME);
+
+    //     let slots_uids = &incubator.slots;
+    //     reveal(
+    //         &mut incubator,
+    //         &mut tracker,
+    //         *vector::borrow<ID>(slots_uids, 0),
+    //         &clock,
+    //         ctx(&mut scenario)
+    //     );
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let evos = test_scenario::take_shared<Kiosk>(
+    //         &scenario
+    //     );
+    //     test_scenario::return_shared(evos);
+    //     assert!(index(&incubator) == 1, 5);
+
+
+    //     test_scenario::return_shared(incubator);
+    //     test_scenario::return_shared(clock);
+    //     test_scenario::return_shared(tracker);
+
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::end(scenario);
+
+    //     // let bag = test_scenario::take_child_object<Marketplace, Bag>(scenario, mkp);
+    //     // test_scenario::return_to_sender(scenario, bag);
+    // }
+
+    // #[test]
+    // fun it_add_specis() {
+
+    //     let scenario = test_scenario::begin(CREATOR);
+
+    //     init(EVOS {}, ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
+    //     let admin_cap = test_scenario::take_from_address<AdminCap>(&scenario, CREATOR);
+
+    //     add_specie(
+    //         &admin_cap,
+    //         &mut incubator,
+    //         string::utf8(b"TEST"),
+    //         1,
+    //         b"https://test-specie.jpg",
+    //         ctx(&mut scenario)
+    //     );
+    //     assert!(vector::length(&incubator.specs) == 6, 11);
+
+    //     test_scenario::return_shared(incubator);
+
+    //     test_scenario::return_to_address(CREATOR, admin_cap);
+
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::end(scenario);
+    // }
+
+    // #[test]
+    // fun it_sort_specis() {
+
+    //     let scenario = test_scenario::begin(CREATOR);
+
+    //     init(EVOS {}, ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
+    //     let admin_cap = test_scenario::take_from_address<AdminCap>(&scenario, CREATOR);
+
+    //     add_specie(
+    //         &admin_cap,
+    //         &mut incubator,
+    //         string::utf8(b"TEST"),
+    //         5,
+    //         b"https://test-specie.jpg",
+    //         ctx(&mut scenario)
+    //     );
+    //     assert!(vector::length(&incubator.specs) == 6, 11);
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     add_specie(
+    //         &admin_cap,
+    //         &mut incubator,
+    //         string::utf8(b"TEST"),
+    //         3,
+    //         b"https://test-specie.jpg",
+    //         ctx(&mut scenario)
+    //     );
+    //     assert!(vector::length(&incubator.specs) == 7, 12);
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     add_specie(
+    //         &admin_cap,
+    //         &mut incubator,
+    //         string::utf8(b"TEST"),
+    //         4,
+    //         b"https://test-specie.jpg",
+    //         ctx(&mut scenario)
+    //     );
+    //     assert!(vector::length(&incubator.specs) == 8, 13);
+
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let specs: &vector<Specie> = specs(&incubator);
+    //     let i: u64 = 0;
+    //     let _prev: u8 = 0;
+    //     while(i < vector::length(specs)){
+    //         let s = vector::borrow<Specie>(specs, i);
+    //         assert!(s.weight >= _prev, 14);
+    //         _prev = s.weight;
+    //         i = i+1;
+    //     };
+
+    //     test_scenario::return_shared(incubator);
+
+    //     test_scenario::return_to_address(CREATOR, admin_cap);
+
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::end(scenario);
+    // }
+
+    // #[test]
+    // fun it_draw_specie() {
+
+    //     let scenario = test_scenario::begin(CREATOR);
+
+    //     init(EVOS {}, ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
+
+    //     // Get random specie
+    //     let nonce = vector::empty();
+    //     vector::append(&mut nonce, sui::bcs::to_bytes(&incubator.index)); 
+    //     vector::append(&mut nonce, sui::bcs::to_bytes(&CREATOR));
+
+    //     let i: u64 = 0;
+    //     while(i < 100){
+    //         let contract_commitment = pseudorandom::rand_no_counter(nonce, ctx(&mut scenario));
+    //         let rng = select(100u64, &contract_commitment);
+    //         let specs: &vector<Specie> = specs(&incubator);
+    //         let specie: &Specie = draw_specie(specs, rng);
+    //         std::debug::print(&specie.name);
+    //         i = i+1;
+    //     };
+
+    //     test_scenario::return_shared(incubator);
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::end(scenario);
+    // }
+
+    // #[test]
+    // fun deny_add_specis() {
+        
+    //     let unauth_user: address = @0xABC; 
+    //     let scenario = test_scenario::begin(CREATOR);
+
+    //     init(EVOS {}, ctx(&mut scenario));
+    //     evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, unauth_user);
+
+    //     let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
+    //     let admin_cap = test_scenario::take_from_address<AdminCap>(&scenario, CREATOR);
+
+    //     test_scenario::next_tx(&mut scenario, unauth_user);
+
+    //     add_specie(
+    //         &admin_cap,
+    //         &mut incubator,
+    //         string::utf8(b"TEST"),
+    //         1,
+    //         b"https://test-specie.jpg",
+    //         ctx(&mut scenario)
+    //     );
+    //     assert!(vector::length(&incubator.specs) == 6, 11);
+
+    //     test_scenario::return_shared(incubator);
+    //     test_scenario::return_to_address(CREATOR, admin_cap);
+
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::end(scenario);
+    // }
+
+    // #[test]
+    // fun incubator_stats_are_correct() {
+
+    //     let scenario = test_scenario::begin(CREATOR);
+    //     let user_a: address = @0xA;
+    //     let user_b: address = @0xB;
+
+    //     create_clock(ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     //evosgenesisegg::init(EVOSGENESISEGG, ctx(&mut scenario));
+    //     init(EVOS {}, ctx(&mut scenario));
+    //     evosgenesisegg::init_for_test(knw_genesis::evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let tracker = test_scenario::take_shared<MintTracker>(&scenario);
+
+    //     mint_egg_to_recipient(&mut tracker, CREATOR, ctx(&mut scenario));
+    //     mint_egg_to_recipient(&mut tracker, user_a, ctx(&mut scenario));
+    //     mint_egg_to_recipient(&mut tracker, user_b, ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, user_a);
+
+    //     let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
+    //     let clock = test_scenario::take_shared<Clock>(&scenario);
+
+    //     let egg_a = test_scenario::take_from_address<EvosGenesisEgg>(
+    //         &scenario,
+    //         user_a,
+    //     );
+
+    //     deposit(
+    //         &mut incubator,
+    //         egg_a,
+    //         &clock,
+    //         ctx(&mut scenario)
+    //     );
+    //     test_scenario::next_tx(&mut scenario, user_b);
+
+    //     let egg_b = test_scenario::take_from_address<EvosGenesisEgg>(
+    //         &scenario,
+    //         user_b,
+    //     );
+    //     deposit(
+    //         &mut incubator,
+    //         egg_b,
+    //         &clock,
+    //         ctx(&mut scenario)
+    //     );
+    //     test_scenario::next_tx(&mut scenario, user_a);
+
+    //     clock::increment_for_testing(&mut clock, REVEAL_TIME);
+    //     let slots_uids = &incubator.slots;
+
+    //     reveal(
+    //         &mut incubator,
+    //         &mut tracker,
+    //         *vector::borrow<ID>(slots_uids, 0),
+    //         &clock,
+    //         ctx(&mut scenario)
+    //     );
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+        
+    //     //debug::print(&string::utf8(b"Revealed"));
+
+    //     let evos = test_scenario::take_shared<Kiosk>(
+    //         &scenario
+    //     );
+    //     test_scenario::return_shared<Kiosk>(evos);
+
+    //     assert!(index(&incubator) == 1, 5);
+    //     assert!(inhold(&incubator) == 1, 7);
+
+    //     test_scenario::return_shared(tracker);
+    //     test_scenario::return_shared(incubator);
+    //     test_scenario::return_shared(clock);
+
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::end(scenario);
+
+    //     // let bag = test_scenario::take_child_object<Marketplace, Bag>(scenario, mkp);
+    //     // test_scenario::return_to_sender(scenario, bag);
+    // }
+
+    // #[test]
+    // fun test_kiosk_update_evos_xp() {
+
+    //     let scenario = test_scenario::begin(CREATOR);
+    //     let depositer = @0xBBB0AF;
+
+    //     create_clock(ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     init(EVOS {}, ctx(&mut scenario));
+    //     evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let tracker = test_scenario::take_shared<MintTracker>(&scenario);
+    //     mint_egg_to_recipient(&mut tracker, depositer, ctx(&mut scenario));
+
+    //     test_scenario::next_tx(&mut scenario, depositer);
+
+    //     let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
+    //     let clock = test_scenario::take_shared<Clock>(&scenario);
+    //     let egg = test_scenario::take_from_address<EvosGenesisEgg>(
+    //         &scenario,
+    //         depositer,
+    //     );
+    //     deposit(
+    //         &mut incubator,
+    //         egg,
+    //         &clock,
+    //         ctx(&mut scenario)
+    //     );
+    //     test_scenario::next_tx(&mut scenario, depositer);
+
+    //     clock::increment_for_testing(&mut clock, REVEAL_TIME);
+
+    //     let slots_uids = &incubator.slots;
+
+    //     reveal(
+    //         &mut incubator,
+    //         &mut tracker,
+    //         *vector::borrow<ID>(slots_uids, 0),
+    //         &clock,
+    //         ctx(&mut scenario)
+    //     );
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     // Withdraw evos from kiosk
+    //     assert!(test_scenario::has_most_recent_shared<Kiosk>(), 0);
+    //     let kiosk = test_scenario::take_shared<Kiosk>(
+    //         &scenario,
+    //     );
+
+    //     let publisher = sui::package::claim(EVOS {}, ctx(&mut scenario));
+    //     let (tx_policy, policy_cap) = withdraw_request::init_policy<Evos>(&publisher, ctx(&mut scenario));
+
+    //     let evos_array = all_evos_ids(&incubator);
+    //     assert!(vector::length(&evos_array) > 0, 0);
+    //     let nft_id: ID = get_evos_id_at(&incubator, 0);
+    //     let (nft, request) = ob_kiosk::withdraw_nft_signed<Evos>(
+    //         &mut kiosk,
+    //         nft_id,
+    //         ctx(&mut scenario)
+    //     );
+    //     withdraw_request::confirm<Evos>(request, &tx_policy);
+
+    //     transfer::public_share_object(tx_policy);
+    //     transfer::public_transfer(policy_cap, depositer);
+    //     transfer::public_transfer(publisher, depositer);
+
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     // Deposit evos back into the kiosk
+    //     let update_cap = test_scenario::take_from_address<UpdateCap>(&mut scenario, CREATOR);
+    //     set_xp(&mut nft, 20u32, ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     assert!(xp(&nft) == 20u32, 15);
+    //     //ob_kiosk::assert_listed(&mut kiosk, nft_id);
+
+    //     //test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     ob_kiosk::deposit(&mut kiosk, nft, ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     ob_kiosk::assert_not_listed(&mut kiosk, nft_id);
+    //     ob_kiosk::assert_not_exclusively_listed(&mut kiosk, nft_id);
+
+    //     assert!(index(&incubator) == 1, 5);
+        
+    //     test_scenario::return_shared(incubator);
+    //     test_scenario::return_shared(clock);
+    //     test_scenario::return_shared(kiosk);
+    //     test_scenario::return_shared(tracker);
+        
+    //     test_scenario::return_to_address(CREATOR, update_cap);
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::end(scenario);
+    // }
+
+    // #[test]
+    // fun test_species_rarity() {
+
+    //     let scenario = test_scenario::begin(CREATOR);
+
+    //     init(EVOS {}, ctx(&mut scenario));
+    //     //evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
+
+    //     let i: u64 = 0;
+    //     let dw = witness::from_witness(Witness {});
+    //     while(i < 10u64){
+    //         let egg = create_evos(dw, &mut incubator, ctx(&mut scenario));
+    //         // std::debug::print<String>(&species(&egg));
+    //         transfer::public_share_object(egg);
+    //         i = i+1;
+    //     };
+
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     test_scenario::return_shared(incubator);
+
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::end(scenario);
+    // }
+
+    // #[test]
+    // fun test_slot(){
+
+    //     let scenario = test_scenario::begin(CREATOR);
+    //     create_clock(ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     init(EVOS {}, ctx(&mut scenario));
+    //     evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+
+    //     let tracker = test_scenario::take_shared<MintTracker>(&scenario);
+    //     mint_egg_to_recipient(&mut tracker, CREATOR, ctx(&mut scenario));
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::return_shared(tracker);
+
+    //     let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
+    //     let clock = test_scenario::take_shared<Clock>(&scenario);
+    //     let egg = test_scenario::take_from_address<EvosGenesisEgg>(
+    //         &scenario,
+    //         CREATOR,
+    //     );
+
+    //     deposit(
+    //         &mut incubator,
+    //         egg,
+    //         &clock,
+    //         ctx(&mut scenario)
+    //     );
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+        
+    //     assert!(vector::length(&incubator.slots) == 1, 10);
+    //     test_scenario::return_shared(incubator);
+    //     test_scenario::return_shared(clock);
+    //     test_scenario::next_tx(&mut scenario, CREATOR);
+    //     test_scenario::end(scenario);
+    // }
 
 }

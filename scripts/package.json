@@ -18,12 +18,18 @@
     "distribute_wl": "npx tsc && node build/src/genesis/actions/distribute_wl.js",
     "prices": "npx tsc && node build/src/genesis/actions/prices.js",
     "info": "npx tsc && node build/src/genesis/actions/infos.js",
-    "collect-from-secondary": "npx tsc && node build/src/genesis/actions/royalties/collect.js"
+    "init-orderbook": "npx tsc && node build/src/genesis/orderbook/init.js",
+    "collect-royalties": "npx tsc && node build/src/genesis/actions/royalties/collect.js",
+    "create-withdraw-policy": "npx tsc && node build/src/genesis/kiosk/create_withdraw_cap.js",
+    "evos-enable-ob": "npx tsc && node build/src/evos/actions/evos/enable_orderbook.js",
+    "evos-disable-ob": "npx tsc && node build/src/evos/actions/evos/disable_orderbook.js",
+    "evos-delist": "npx tsc && node build/src/evos/actions/evos/delist.js",
+    "evos-count": "npx tsc && node build/src/evos/actions/evos/get_evos_amount.js"
   },
-  "author": "",
+  "author": "kunnow",
   "license": "ISC",
   "dependencies": {
-    "@mysten/sui.js": "^0.32.2",
+    "@mysten/sui.js": "^0.34.1",
     "@originbyte/js-sdk": "^0.29.54",
     "typescript": "^5.0.4"
   }

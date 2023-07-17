@@ -5,13 +5,13 @@ published-at = "0xedda15e016cb63efe2161ca1ea6a1fe6c1f8a79ba51485ad7bf2121e24008f
 authors = ["Ev0s", "KNW Technologies"]
 
 [dependencies]
-Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "ae1212baf8f0837e25926d941db3d26a61c1bea2" }
-NftProtocol = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/nft_protocol"}
-Launchpad = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/launchpad"}
-Permissions = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/permissions"}
-Utils = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/utils"}
-Request = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/request"}
-LiquidityLayerV1 = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "2a435a0194a3b62988f38de519c212c224162be2", subdir = "contracts/liquidity_layer_v1"}
+#Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "8b681515c0cf435df2a54198a28ab4ef574d202b" }
+NftProtocol = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "v1.3.0-mainnet", subdir = "contracts/nft_protocol"}
+Launchpad = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "v1.3.0-mainnet", subdir = "contracts/launchpad"}
+Permissions = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "v1.3.0-mainnet", subdir = "contracts/permissions"}
+Utils = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "v1.3.0-mainnet", subdir = "contracts/utils"}
+Request = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "v1.3.0-mainnet", subdir = "contracts/request"}
+LiquidityLayerV1 = { git = "https://github.com/Origin-Byte/nft-protocol.git", rev = "v1.3.0-mainnet", subdir = "contracts/liquidity_layer_v1"}
 
 [addresses]
 knw_genesis =  "0xcca18faec0dbe4b35ffc8e95308aa008c7b3eba38c2a9ddedf861b96cbc74ee2"
@@ -21,9 +21,9 @@ sui =  "0x2"
 #mint_Tracker = 0xef9e071dbda7c0e77085487e3d506cafe959f1bc1a753cc98d28f0e4e47b7949
 #mint_Tracker_cap = 0x9535bcb8835c14ec2f7cf1fbec938152ab9f4ca09ed721393151b5067fb76431
 #publisher = 0xc23a89d471fb61ca705b1c3b33de4d7e9a4212933592bdd224d73ba3fc85a127
-#transfer_policy = 0xa25bdcc3566e38fb414c19393a3a39e43713062d74e3ddbe90f0a2a886999776
+#transfer_policy_cap = 0xa25bdcc3566e38fb414c19393a3a39e43713062d74e3ddbe90f0a2a886999776
 #upgrade_cap = 0x3b724e6ed7146d10ec16d65bcb918582bb04813af102da86edc35057213a5014
 #collection = 0x086c66e7a123bcbb149eb2b1a7f2a979cf7eaac2f0f2013da10d1a1a4d286990
-
+#royalty_strategy_bps = 0xed7eba77e6e0de0368343c1b3cdb1730aff2e4d7518e09821810cfc28777e6bf
 # address-2
 #mint_Tracker_cap = 0x07d1fb444013aa3ca1421f858c0f577254f6b2fc706dac0a2ac15dd42c4f4ebf
