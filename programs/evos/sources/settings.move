@@ -1,3 +1,13 @@
+/* 
+ * Author: kunnow
+ * Company: KNW Technologies FZCO
+ * License: MIT
+ * Description: All game settings are handled by this module.
+ * Features:
+ *      - (GameSettings) It's the main wrapper for all the settings
+ *      - (GemsMine) It contains all the gems settings
+ *      - (Stage) It represent a stage
+ */
 module knw_evos::settings {
 
     friend knw_evos::evoscore;

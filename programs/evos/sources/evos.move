@@ -735,14 +735,26 @@ module knw_evos::evos {
     }
 
     public fun has_attribute(
-        evos: &mut Evos,
+        evos: &Evos,
         name: vector<u8>,
-        _ctx: &mut TxContext
     ): bool {
         vec_map::contains(
             attributes::get_attributes(&evos.attributes),
             &ascii::string(name)
         )
+    }
+
+    public fun get_attribute(
+        evos: &Evos,
+        name: vector<u8>
+    ): ascii::String {
+        let attributes = attributes::get_attributes(&evos.attributes);
+        let name = &ascii::string(name);
+        let x = vec_map::get(
+            attributes,
+            name
+        );
+        *x
     }
 
     // ==== ORDERBOOK ====

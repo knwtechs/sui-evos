@@ -18,7 +18,7 @@ knw_genesis = {local = "../genesis"}
 [addresses]
 #test_knw_evos =  "0xe22293b97873f57ee94e79d24563b11f63565559be9604a57d976b2be0dd475e"
 #knw_evos = "0x169664f0f62bec3d59bb621d84df69927b3377a1f32ff16c862d28c158480065"
-knw_evos = "0x169664f0f62bec3d59bb621d84df69927b3377a1f32ff16c862d28c158480065"
+knw_evos = "0x0"
 sui =  "0x2"
 
 #incubator = 0xdf00da22904f8edb76cd854737d6ab9477b64f0ee8d4972fcc23a7077e135ae7

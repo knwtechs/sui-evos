@@ -347,13 +347,11 @@ module knw_evos::evos {
     // ==== ADMINCAP PROTECTED ====
 
     /* UPDATE 23/05/23 */
-    // still need review about create_transfer_policy function
     public fun create_transfer_policy(
         publisher: &Publisher,
         ctx: &mut TxContext
     ) {
         let (transfer_policy, transfer_policy_cap) = ob_request::withdraw_request::init_policy<Evos>(publisher, ctx);
-        //let (transfer_policy, transfer_policy_cap) = ob_request::request::new_policy(Witness {}, ctx);
         enforce_contract(&mut transfer_policy, &transfer_policy_cap);
         transfer::public_share_object(transfer_policy);
         transfer::public_transfer(transfer_policy_cap, tx_context::sender(ctx))
@@ -737,14 +735,26 @@ module knw_evos::evos {
     }
 
     public fun has_attribute(
-        evos: &mut Evos,
+        evos: &Evos,
         name: vector<u8>,
-        _ctx: &mut TxContext
     ): bool {
         vec_map::contains(
             attributes::get_attributes(&evos.attributes),
             &ascii::string(name)
         )
+    }
+
+    public fun get_attribute(
+        evos: &Evos,
+        name: vector<u8>
+    ): ascii::String {
+        let attributes = attributes::get_attributes(&evos.attributes);
+        let name = &ascii::string(name);
+        let x = vec_map::get(
+            attributes,
+            name
+        );
+        *x
     }
 
     // ==== ORDERBOOK ====

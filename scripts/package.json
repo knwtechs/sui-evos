@@ -26,7 +26,7 @@
     "evos-delist": "npx tsc && node build/src/evos/actions/evos/delist.js",
     "evos-count": "npx tsc && node build/src/evos/actions/evos/get_evos_amount.js"
   },
-  "author": "",
+  "author": "kunnow",
   "license": "ISC",
   "dependencies": {
     "@mysten/sui.js": "^0.34.1",

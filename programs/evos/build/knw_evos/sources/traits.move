@@ -33,7 +33,7 @@ module knw_evos::traits {
         traits: vector<Trait>,
         stage: String,
         level: u32,
-        price: u32
+        price: u32 // in gems
     }
     struct Trait has store, copy, drop {
         name: ascii::String,
@@ -55,14 +55,14 @@ module knw_evos::traits {
     const EZeroBoxes: u64 = 3;
 
     public(friend) fun new_trait_box(
-        index: u16,
-        level: u32,
-        stage: vector<u8>,
-        names: vector<vector<u8>>,
-        values: vector<vector<u8>>,
-        urls: vector<vector<u8>>,
-        weights: vector<u8>,
-        price: u32
+        index: u16,                // 1
+        level: u32,                // 2
+        stage: vector<u8>,         // baby  
+        names: vector<vector<u8>>, // ['hat','hat','hat']
+        values: vector<vector<u8>>, // ['red hat' 'blue hat', 'yellow hat']
+        urls: vector<vector<u8>>, // ['https://red_hat.png', 'https://blue_hat.png', 'https://yellow_hat.png']
+        weights: vector<u8>,        // [55,55,55]
+        price: u32                  // 32 gemme
     ): TraitBox {
         let traits = empty_traits();
         assert!( 

@@ -36,28 +36,7 @@ module knw_evos::evoscore {
         id: UID,
         settings: GameSettings,
         delegations: u64
-    }  
-
-    // Stores all the GameSettings
-    // struct GameSettings has store {
-    //     gems_mine: GemsMine,
-    //     xp_per_frame: u64,
-    //     xp_timeframe: u64,
-    //     xp_var_factor: u64,
-    //     xp_dec_k: u64,
-    //     stages: vector<Stage>,
-    //     max_gems: u32,
-    //     max_xp: u32
-    // }
-
-    // // Keeps track of gems emission rate, supply emitted & burned
-    // struct GemsMine has store {
-    //     emitted: u64,
-    //     burned: u64,
-    //     gems_per_frame: u64,
-    //     gems_dec_k: u64,
-    //     timeframe: u64
-    // }
+    }
 
     // It holds all the info for a specific user
     // It's added to EvosGame as dynamic object field
@@ -79,18 +58,9 @@ module knw_evos::evoscore {
         nft_id: ID
     }
 
-    // A Stage represents:
-    // N levels where the upgrade to the (N+1)th level costs the same xp amount than
-    // the upgrade to the Nth level of the same Stage
-    // struct Stage has store, copy {
-    //     name: String,
-    //     base: u32,
-    //     levels: u32,
-    //     rewards: vector<u32>
-    // }
-
     // Constant values
     const MAX_U32: u32 = 4294967295;
+
     // const MAX_U64: u64 = (264) - 1;
     const DEFAULT_GEMS_TIME_FRAME: u64 = 1000 * 60 * 30; // 30 minutes
     const DEFAULT_GEMS_PER_FRAME: u64 = 1;
@@ -104,7 +74,6 @@ module knw_evos::evoscore {
     const DEFAULT_GEMS_DEC_K: u64 = 2;
 
     // Errors Code
-    // const EStageNotFound: u64 = 0;
     const EInsufficientGems: u64 = 1;
     const EInsufficientXp: u64 = 2;
     const EMaxGemsExceeded: u64 = 3;
@@ -599,7 +568,6 @@ module knw_evos::evoscore {
 
         // Get the UserSlot for this Ev0s
         let now: u64 = clock::timestamp_ms(clock);
-        //let evos = withdraw_evos(game, kiosk, nft_id, policy, ctx);
 
         sync_undelegated(
             game,
@@ -835,29 +803,29 @@ module knw_evos::evoscore {
     }
 
     // Kiosk related
-    fun withdraw_evos(
-        _game: &EvosGame,
-        kiosk: &mut sui::kiosk::Kiosk, 
-        nft_id: ID, 
-        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::withdraw_request::WITHDRAW_REQ>>, 
-        ctx: &mut TxContext, 
-    ): Evos {
-        let (nft, withdraw_request) = ob_kiosk::withdraw_nft_signed(kiosk, nft_id, ctx); 
-        evos::confirm_withdrawal(&mut withdraw_request); 
-        ob_request::withdraw_request::confirm(withdraw_request, policy);
-        nft
-    }
+    // fun withdraw_evos(
+    //     _game: &EvosGame,
+    //     kiosk: &mut sui::kiosk::Kiosk, 
+    //     nft_id: ID, 
+    //     policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::withdraw_request::WITHDRAW_REQ>>, 
+    //     ctx: &mut TxContext, 
+    // ): Evos {
+    //     let (nft, withdraw_request) = ob_kiosk::withdraw_nft_signed(kiosk, nft_id, ctx); 
+    //     evos::confirm_withdrawal(&mut withdraw_request); 
+    //     ob_request::withdraw_request::confirm(withdraw_request, policy);
+    //     nft
+    // }
 
-    fun deposit_evos(
-        game: &EvosGame,
-        kiosk: &mut sui::kiosk::Kiosk, 
-        nft: Evos,
-        ctx: &mut TxContext, 
-    ) {
-        let evos_id = sui::object::id(&nft);
-        ob_kiosk::ob_kiosk::deposit<Evos>(kiosk, nft, ctx);
-        lock_nft(game, kiosk, evos_id, ctx);
-    }
+    // fun deposit_evos(
+    //     game: &EvosGame,
+    //     kiosk: &mut sui::kiosk::Kiosk, 
+    //     nft: Evos,
+    //     ctx: &mut TxContext, 
+    // ) {
+    //     let evos_id = sui::object::id(&nft);
+    //     ob_kiosk::ob_kiosk::deposit<Evos>(kiosk, nft, ctx);
+    //     lock_nft(game, kiosk, evos_id, ctx);
+    // }
     fun lock_nft(
         game: &EvosGame,
         kiosk: &mut sui::kiosk::Kiosk, 
@@ -946,7 +914,6 @@ module knw_evos::evoscore {
         }
     }
 
-
     fun add_gems(
         game: &mut EvosGame,
         kiosk: &mut sui::kiosk::Kiosk,
@@ -969,7 +936,6 @@ module knw_evos::evoscore {
         evos::sub_gems_kiosk(kiosk, evos_id, amount, policy, ctx);
         settings::burn_gems(settings::gems_mine_mut(settings_mut(game)), amount)
     }
-
     fun add_xp(
         kiosk: &mut sui::kiosk::Kiosk,
         evos_id: ID,
@@ -993,7 +959,11 @@ module knw_evos::evoscore {
     use sui::test_scenario::{Self, ctx};
 
     #[test_only]
+    use std::ascii;
+
+    #[test_only]
     const CREATOR: address = @0xABBA;
+
 
     #[test]
     fun core_init_success(){
@@ -1726,11 +1696,9 @@ module knw_evos::evoscore {
             ctx(&mut scenario)
         );
 
-        // let evos = withdraw_evos(&mut game, &mut kiosk, evos_id, &policy, ctx(&mut scenario));
         let evos = ob_kiosk::ob_kiosk::borrow_nft<Evos>(&mut kiosk, evos_id);
         assert!(evos::xp(evos) == 20, 5);
         assert!(evos::gems(evos) == 80, 6);
-        //deposit_evos(&game, &mut kiosk, evos, ctx(&mut scenario));
         test_scenario::next_tx(&mut scenario, user);
 
         to_next_stage(
@@ -1756,13 +1724,11 @@ module knw_evos::evoscore {
         );
         test_scenario::next_tx(&mut scenario, user);
 
-        //let evos = withdraw_evos(&mut game, &mut kiosk, evos_id, &policy, ctx(&mut scenario));
         let evos = ob_kiosk::ob_kiosk::borrow_nft<Evos>(&kiosk, evos_id);
         assert!(evos::stage(evos) == string::utf8(b"Baby"), 6);
         assert!(evos::xp(evos) == 124, 7);
         assert!(evos::level(evos) == 3, 8);
         assert!(evos::url(evos) == url::new_unsafe_from_bytes(b"http://test-trait.org"), 9);
-        //deposit_evos(&game, &mut kiosk, evos, ctx(&mut scenario));
 
         test_scenario::return_to_address(CREATOR, evos_pub);
 
@@ -2293,7 +2259,145 @@ module knw_evos::evoscore {
         test_scenario::return_to_address(CREATOR, thread_cap);
 
         test_scenario::return_shared(borrow_policy);
-        //test_scenario::return_shared(transfer_policy);
+        test_scenario::return_shared(clock);
+        test_scenario::return_shared(game);
+        test_scenario::return_shared(incubator);
+        test_scenario::return_shared(kiosk);
+
+        test_scenario::next_tx(&mut scenario, CREATOR);
+        test_scenario::end(scenario);
+    }
+
+    #[test]
+    fun core_admin_create_box_and_user_opens_it_and_check_evos_trait(){
+        let scenario = test_scenario::begin(CREATOR);
+        let user: address = @0xBABBA;
+        knw_evos::utils::create_clock(ctx(&mut scenario));
+
+        init(EVOSCORE {}, ctx(&mut scenario));
+        evos::init_for_test(ctx(&mut scenario));
+        test_scenario::next_tx(&mut scenario, CREATOR);
+
+        assert!(test_scenario::has_most_recent_shared<EvosGame>(), 1);
+        assert!(test_scenario::has_most_recent_shared<evos::Incubator>(), 2);
+
+        let evos_pub = test_scenario::take_from_address<sui::package::Publisher>(&mut scenario, CREATOR);
+        evos::create_borrow_policy(&evos_pub, ctx(&mut scenario));
+        test_scenario::next_tx(&mut scenario, user);
+
+        let borrow_policy = test_scenario::take_shared<ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>>(&mut scenario);
+        let game = test_scenario::take_shared<EvosGame>(&mut scenario);
+        let admin_cap = test_scenario::take_from_address<GameAdminCap>(&mut scenario, CREATOR);
+        let incubator = test_scenario::take_shared<evos::Incubator>(&mut scenario);
+        let clock = test_scenario::take_shared<sui::clock::Clock>(&mut scenario);
+        
+        assert!(delegations(&game) == 0, 2);
+
+        evos::create_kiosk_with_evos_for_test(&mut incubator, user, ctx(&mut scenario));
+        test_scenario::next_tx(&mut scenario, CREATOR);
+
+        assert!(dof::exists_(&game.id, b"traits"), 3);
+
+        let names = vector::empty<vector<u8>>();
+        vector::push_back(&mut names, b"test_attr_1");
+
+        let values = vector::empty<vector<u8>>();
+        vector::push_back(&mut values, b"test_1");
+        let urls = vector::empty<vector<u8>>();
+        vector::push_back(&mut urls, b"http://test_1");
+        let weights = vector::empty<u8>();
+        vector::push_back(&mut weights, 255);
+
+        add_new_traitbox(
+            &admin_cap,
+            &mut game,
+            2,
+            b"Baby",
+            names,
+            values,
+            urls,
+            weights,
+            10,
+            ctx(&mut scenario)
+        );
+        test_scenario::next_tx(&mut scenario, user);
+        
+        let evos_id = *vector::borrow<ID>(&evos::all_evos_ids(&incubator), 0);
+        let kiosk = test_scenario::take_shared<sui::kiosk::Kiosk>(&mut scenario);
+        delegate(&mut game, &mut kiosk, evos_id, &clock, ctx(&mut scenario));
+        test_scenario::next_tx(&mut scenario, user);
+        ob_kiosk::ob_kiosk::assert_exclusively_listed(&mut kiosk, evos_id);
+        assert!(delegations(&game) == 1, 3);
+
+        // should earn 272 gems & 68 xp
+        sui::clock::increment_for_testing(&mut clock, DEFAULT_XP_TIME_FRAME * 68);
+        test_scenario::next_tx(&mut scenario, user);
+
+        to_next_stage(
+            &mut game,
+            &mut kiosk,
+            evos_id,
+            b"http://test-trait.org",
+            &borrow_policy,
+            &clock,
+            ctx(&mut scenario)
+        );
+        test_scenario::next_tx(&mut scenario, user);
+
+        let evos = ob_kiosk::ob_kiosk::borrow_nft<Evos>(&kiosk, evos_id);
+        assert!(evos::stage(evos) == string::utf8(b"Baby"), 6);
+        assert!(evos::xp(evos) == 68, 7);
+        assert!(evos::gems(evos) == 272, 7);
+        assert!(evos::level(evos) == 2, 8);
+        assert!(evos::url(evos) == url::new_unsafe_from_bytes(b"http://test-trait.org"), 9);
+        test_scenario::next_tx(&mut scenario, user);
+
+        assert!(dof::exists_(&game.id, evos_id), 11);
+
+        let box_index = find_eligible_trait_box(
+            dof::borrow(&game.id, evos_id),
+            evos_id,
+            dof::borrow(&game.id, b"traits"),
+            ctx(&mut scenario)
+        );
+
+        assert!(std::option::is_some(&box_index), 10);
+
+        open_box(
+            &mut game,
+            std::option::extract(&mut box_index),
+            evos_id,
+            &mut kiosk,
+            &borrow_policy,
+            ctx(&mut scenario)
+        );
+        test_scenario::next_tx(&mut scenario, CREATOR);
+        
+        ob_kiosk::ob_kiosk::assert_exclusively_listed(&mut kiosk, evos_id);
+
+        let thread_cap = test_scenario::take_from_address<GameThreadCap>(&mut scenario, CREATOR);
+        
+        confirm_box_receipt(
+            &thread_cap,
+            &mut game,
+            evos_id,
+            &mut kiosk,
+            &borrow_policy,
+            b"box_trait",
+            ctx(&mut scenario)
+        );
+        test_scenario::next_tx(&mut scenario, user);
+
+        let evos = ob_kiosk::ob_kiosk::borrow_nft<Evos>(&kiosk, evos_id);
+        assert!(evos::url(evos) == url::new_unsafe_from_bytes(b"box_trait"), 13);
+        assert!(evos::has_attribute(evos, b"test_attr_1"), 14);
+        assert!(evos::get_attribute(evos, b"test_attr_1") == ascii::string(b"test_1"), 15);
+
+        test_scenario::return_to_address(CREATOR, evos_pub);
+        test_scenario::return_to_address(CREATOR, admin_cap);
+        test_scenario::return_to_address(CREATOR, thread_cap);
+
+        test_scenario::return_shared(borrow_policy);
         test_scenario::return_shared(clock);
         test_scenario::return_shared(game);
         test_scenario::return_shared(incubator);

@@ -7,3 +7,7 @@ export const INCUBATOR_ID = "0x2c29dff5aa300676a5c7650794e9587a17c9f55518d8bf2d4
 export const TRANSFER_POLICY = "0x19a5dbd42169bd2f693c01998a1fc0ed92801d9c3bc2a88514bb45474a644314"
 export const ALLOWLIST = "0x4fc3c9564d024adf26e4afeab8f7f38b5935c51625cb193c8c16f642369fa424"
 export const ROYALTY_STRATEGY_BPS = "0xba47fd986c197ce4f2f3ecd73539ace7ea3f7144c22e7ccb36e63c28343b5f2b"
+
+export const GAME_ID = ""
+export const BORROW_POLICY_ID = ""
+export const THREAD_CAP_ID = ""
