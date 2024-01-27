@@ -34,6 +34,7 @@ module sui::clock {
         clock.timestamp_ms
     }
 
+    #[allow(unused_function)]
     /// Create and share the singleton Clock -- this function is
     /// called exactly once, during genesis.
     fun create(ctx: &TxContext) {
@@ -48,6 +49,7 @@ module sui::clock {
         })
     }
 
+    #[allow(unused_function)]
     fun consensus_commit_prologue(
         clock: &mut Clock,
         timestamp_ms: u64,
@@ -62,7 +64,7 @@ module sui::clock {
     #[test_only]
     /// Expose the functionality of `create()` (usually only done during
     /// genesis) for tests that want to create a Clock.
-    public fun create_for_testing(ctx: &mut sui::tx_context::TxContext): Clock {
+    public fun create_for_testing(ctx: &mut TxContext): Clock {
         Clock {
             id: object::new(ctx),
             timestamp_ms: 0,
