@@ -769,7 +769,7 @@ module knw_evos::evos {
 
     // ==== ADMINCAP PROTECTED ====
 
-    /* UPDATE V4
+    /* UPDATE V4 */
 
     #[lint_allow(self_transfer)]
     public fun create_transfer_policy(
@@ -927,7 +927,7 @@ module knw_evos::evos {
         ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
     }
 
-    END UPDATE V4 */
+    /* END UPDATE V4 */
 
     #[test_only]
     #[lint_allow(self_transfer)]
