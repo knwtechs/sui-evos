@@ -17,7 +17,7 @@
 module knw_evos::evos {
     
     // UPDATE V4
-    // friend knw_evos::evoscore;
+    friend knw_evos::evoscore;
     // END UPDATE V4
 
     use std::ascii;
@@ -69,7 +69,7 @@ module knw_evos::evos {
     const MAX_U32: u32 = 4294967295;
     #[allow(unused_const)]
     const MAX_U64: u64 = (2^64) - 1;
-    const VERSION: u64 = 3;
+    const VERSION: u64 = 4;
     const COLLECTION_CREATOR: address = @0x74a54d924aca2040b6c9800123ad9232105ea5796b8d5fc23af14dd3ce0f193f;
     #[allow(unused_const)]
     const COLLECTION_ADMIN: address = @0x1dae98dcae53909f23184b273923184aa451986c4b71da1950d749def37f8ea0;
@@ -603,8 +603,9 @@ module knw_evos::evos {
     }
 
     public fun has_attribute(
-        evos: &Evos,
+        evos: &mut Evos,
         name: vector<u8>,
+        _ctx: &mut TxContext
     ): bool {
         vec_map::contains(
             attributes::get_attributes(&evos.attributes),
@@ -926,7 +927,7 @@ module knw_evos::evos {
         ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
     }
 
-    /* END UPDATE V4 */
+    END UPDATE V4 */
 
     #[test_only]
     #[lint_allow(self_transfer)]

@@ -16,17 +16,16 @@
 #[lint_allow(share_owned)]
 module knw_evos::evos {
     
-    // UPDATE 23/05/23
+    // UPDATE V4
     // friend knw_evos::evoscore;
-    // END UPDATE
+    // END UPDATE V4
 
     use std::ascii;
     use std::option;
     use std::string::{Self, String};
     use std::vector;
-    
+
     use sui::vec_map;
-    // use sui::bcs;
     use sui::sui::{SUI};
     use sui::url::{Self, Url};
     use sui::display;
@@ -50,11 +49,15 @@ module knw_evos::evos {
     use nft_protocol::mint_cap::{Self, MintCap};
 
     use ob_pseudorandom::pseudorandom;
+
     use ob_utils::utils;
     use ob_utils::display as ob_display;
+
     use ob_permissions::witness;
+
     use ob_request::transfer_request;
     use ob_request::borrow_request::{Self, BorrowRequest, ReturnPromise};
+
     use ob_kiosk::ob_kiosk;
 
     use liquidity_layer_v1::orderbook;
@@ -76,6 +79,7 @@ module knw_evos::evos {
     struct EVOS has drop {}
     struct Witness has drop {}
     struct AdminCap has key, store { id: UID }
+    /* Update V3 */
     struct UpdateCap has key, store { id: UID }
 
     struct Evos has key, store {
@@ -598,10 +602,10 @@ module knw_evos::evos {
         }
     }
 
-    
     public fun has_attribute(
-        evos: &Evos,
+        evos: &mut Evos,
         name: vector<u8>,
+        _ctx: &mut TxContext
     ): bool {
         vec_map::contains(
             attributes::get_attributes(&evos.attributes),
@@ -609,7 +613,7 @@ module knw_evos::evos {
         )
     }
     
-    /* UPDATE 22/01/24 */
+    /* Update V3 */
     public fun get_attribute(
         evos: &Evos,
         name: vector<u8>
@@ -623,6 +627,7 @@ module knw_evos::evos {
         *x
     }
 
+    /* Update V3 */
     public entry fun give_update_cap(
         _: &AdminCap,
         recipient: address,
@@ -631,7 +636,6 @@ module knw_evos::evos {
         let cap = UpdateCap {id: object::new(ctx)};
         transfer::public_transfer(cap, recipient)
     }
-    /* END UPDATE 22/01/24 */
 
     // ==== ORDERBOOK ====
     public entry fun init_protected_orderbook(
@@ -765,165 +769,165 @@ module knw_evos::evos {
 
     // ==== ADMINCAP PROTECTED ====
 
-    /* UPDATE 23/05/23 */
-    // #[lint_allow(self_transfer)]
-    // public fun create_transfer_policy(
-    //     publisher: &Publisher,
-    //     ctx: &mut TxContext
-    // ) {
-    //     let (transfer_policy, transfer_policy_cap) = ob_request::withdraw_request::init_policy<Evos>(publisher, ctx);
-    //     enforce_contract(&mut transfer_policy, &transfer_policy_cap);
-    //     transfer::public_share_object(transfer_policy);
-    //     transfer::public_transfer(transfer_policy_cap, tx_context::sender(ctx))
-    // }
-    // public(friend) fun confirm_withdrawal( 
-    //     request: &mut ob_request::withdraw_request::WithdrawRequest<Evos>,
-    // ) {
-    //     ob_request::withdraw_request::add_receipt(request, &Witness {}); 
-    // }
-    // fun enforce_contract<T>( 
-    //     policy: &mut ob_request::request::Policy<T>, 
-    //     cap: &ob_request::request::PolicyCap, 
-    // ) { 
-    //     ob_request::request::enforce_rule_no_state<T, Witness>(policy, cap); 
-    // }
-    /* END UPDATE */
+    /* UPDATE V4
 
-    /* UPDATE 04/07/23 */
-    // #[lint_allow(self_transfer)]
-    // public fun create_borrow_policy(
-    //     publisher: &Publisher,
-    //     ctx: &mut TxContext
-    // ) {
-    //     let (borrow_policy, borrow_policy_cap) = ob_request::borrow_request::init_policy<Evos>(publisher, ctx);
-    //     transfer::public_share_object(borrow_policy);
-    //     transfer::public_transfer(borrow_policy_cap, tx_context::sender(ctx))
-    // }
-    // public(friend) fun add_gems_kiosk(
-    //     kiosk: &mut sui::kiosk::Kiosk,
-    //     nft_id: ID,
-    //     amount: u32,
-    //     policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
-    //     ctx: &mut TxContext
-    // ) {
-    //     let dw = witness::from_witness(Witness {});
-    //     let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
-    //     let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
-    //     let gems = gems(nft);
-    //     set_gems(nft, gems + amount, ctx);
-    //     ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
-    // }
-    // public(friend) fun sub_gems_kiosk(
-    //     kiosk: &mut sui::kiosk::Kiosk,
-    //     nft_id: ID,
-    //     amount: u32,
-    //     policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
-    //     ctx: &mut TxContext
-    // ) {
-    //     let dw = witness::from_witness(Witness {});
-    //     let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
-    //     let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
-    //     let gems = gems(nft);
-    //     assert!(gems >= amount, EInsufficientGems);
-    //     set_gems(nft, gems - amount, ctx);
-    //     ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
-    // }
-    // public(friend) fun add_xp_kiosk(
-    //     kiosk: &mut sui::kiosk::Kiosk,
-    //     nft_id: ID,
-    //     amount: u32,
-    //     policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
-    //     ctx: &mut TxContext
-    // ) {
-    //     let dw = witness::from_witness(Witness {});
-    //     let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
-    //     let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
-    //     let xp = xp(nft);
-    //     set_xp(nft, xp + amount, ctx);
-    //     ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
-    // }
-    // public(friend) fun sub_xp_kiosk(
-    //     kiosk: &mut sui::kiosk::Kiosk,
-    //     nft_id: ID,
-    //     amount: u32,
-    //     policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
-    //     ctx: &mut TxContext
-    // ) {
-    //     let dw = witness::from_witness(Witness {});
-    //     let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
-    //     let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
-    //     let xp = xp(nft);
-    //     assert!(xp >= amount, EInsufficientXp);
-    //     set_xp(nft, xp - amount, ctx);
-    //     ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
-    // }
-    // public(friend) fun update_url_kiosk(
-    //     kiosk: &mut sui::kiosk::Kiosk,
-    //     nft_id: ID,
-    //     new_url: vector<u8>,
-    //     policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
-    //     ctx: &mut TxContext
-    // ) {
-    //     let dw = witness::from_witness(Witness {});
-    //     let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
-    //     let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
-    //     update_url(nft, new_url, ctx);
-    //     ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
-    // }
-    // public(friend) fun set_stage_kiosk(
-    //     kiosk: &mut sui::kiosk::Kiosk,
-    //     nft_id: ID,
-    //     stage: vector<u8>,
-    //     uri: vector<u8>,
-    //     policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
-    //     ctx: &mut TxContext
-    // ) {
-    //     assert!(vector::length(&stage) > 0, EEmptyStage);
-    //     let dw = witness::from_witness(Witness {});
-    //     let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
-    //     let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
-    //     set_stage(nft, stage, uri, ctx);
-    //     //update_url(nft, uri);
-    //     ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
-    // }
-    // public(friend) fun set_level_kiosk(
-    //     kiosk: &mut sui::kiosk::Kiosk,
-    //     nft_id: ID,
-    //     level: u32,
-    //     policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
-    //     ctx: &mut TxContext
-    // ) {
-    //     let dw = witness::from_witness(Witness {});
-    //     let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
-    //     let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
-    //     set_level(nft, level, ctx);
-    //     ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
-    // }
-    // public(friend) fun set_attribute_kiosk(
-    //     kiosk: &mut sui::kiosk::Kiosk,
-    //     nft_id: ID,
-    //     name: vector<u8>,
-    //     value: vector<u8>,
-    //     policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
-    //     ctx: &mut TxContext
-    // ) {
-    //     let dw = witness::from_witness(Witness {});
-    //     let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
-    //     let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
-    //     let attributes = attributes::get_attributes_mut(&mut nft.attributes);
-    //     let key = ascii::string(name);
-    //     if(vec_map::contains(attributes, &key)){
-    //         if(vector::length(&value) == 1 && *vector::borrow(&value, 0) == 0u8){
-    //             remove_attribute(nft, name, ctx);
-    //         }else{
-    //             *vec_map::get_mut(attributes, &key) = ascii::string(value);
-    //         }
-    //     }else{
-    //         attributes::insert_attribute<Witness, Evos>(&mut nft.attributes, key, ascii::string(value));
-    //     };
-    //     ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
-    // }
-    /* END UPDATE */
+    #[lint_allow(self_transfer)]
+    public fun create_transfer_policy(
+        publisher: &Publisher,
+        ctx: &mut TxContext
+    ) {
+        let (transfer_policy, transfer_policy_cap) = ob_request::withdraw_request::init_policy<Evos>(publisher, ctx);
+        enforce_contract(&mut transfer_policy, &transfer_policy_cap);
+        transfer::public_share_object(transfer_policy);
+        transfer::public_transfer(transfer_policy_cap, tx_context::sender(ctx))
+    }
+    public(friend) fun confirm_withdrawal( 
+        request: &mut ob_request::withdraw_request::WithdrawRequest<Evos>,
+    ) {
+        ob_request::withdraw_request::add_receipt(request, &Witness {}); 
+    }
+    fun enforce_contract<T>( 
+        policy: &mut ob_request::request::Policy<T>, 
+        cap: &ob_request::request::PolicyCap, 
+    ) { 
+        ob_request::request::enforce_rule_no_state<T, Witness>(policy, cap); 
+    }
+
+    #[lint_allow(self_transfer)]
+    public fun create_borrow_policy(
+        publisher: &Publisher,
+        ctx: &mut TxContext
+    ) {
+        let (borrow_policy, borrow_policy_cap) = ob_request::borrow_request::init_policy<Evos>(publisher, ctx);
+        transfer::public_share_object(borrow_policy);
+        transfer::public_transfer(borrow_policy_cap, tx_context::sender(ctx))
+    }
+    public(friend) fun add_gems_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        amount: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let gems = gems(nft);
+        set_gems(nft, gems + amount, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun sub_gems_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        amount: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let gems = gems(nft);
+        assert!(gems >= amount, EInsufficientGems);
+        set_gems(nft, gems - amount, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun add_xp_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        amount: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let xp = xp(nft);
+        set_xp(nft, xp + amount, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun sub_xp_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        amount: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let xp = xp(nft);
+        assert!(xp >= amount, EInsufficientXp);
+        set_xp(nft, xp - amount, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun update_url_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        new_url: vector<u8>,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        update_url(nft, new_url, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun set_stage_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        stage: vector<u8>,
+        uri: vector<u8>,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        assert!(vector::length(&stage) > 0, EEmptyStage);
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        set_stage(nft, stage, uri, ctx);
+        //update_url(nft, uri);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun set_level_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        level: u32,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        set_level(nft, level, ctx);
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+    public(friend) fun set_attribute_kiosk(
+        kiosk: &mut sui::kiosk::Kiosk,
+        nft_id: ID,
+        name: vector<u8>,
+        value: vector<u8>,
+        policy: &ob_request::request::Policy<ob_request::request::WithNft<Evos, ob_request::borrow_request::BORROW_REQ>>,
+        ctx: &mut TxContext
+    ) {
+        let dw = witness::from_witness(Witness {});
+        let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
+        let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
+        let attributes = attributes::get_attributes_mut(&mut nft.attributes);
+        let key = ascii::string(name);
+        if(vec_map::contains(attributes, &key)){
+            if(vector::length(&value) == 1 && *vector::borrow(&value, 0) == 0u8){
+                remove_attribute(nft, name, ctx);
+            }else{
+                *vec_map::get_mut(attributes, &key) = ascii::string(value);
+            }
+        }else{
+            attributes::insert_attribute<Witness, Evos>(&mut nft.attributes, key, ascii::string(value));
+        };
+        ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
+    }
+
+    END UPDATE V4 */
 
     #[test_only]
     #[lint_allow(self_transfer)]
@@ -1505,103 +1509,104 @@ module knw_evos::evos {
         // test_scenario::return_to_sender(scenario, bag);
     }
 
-    // #[test]
-    // fun test_kiosk_update_evos_xp() {
+    
+    /* #[test]
+    fun test_kiosk_update_evos_xp() {
 
-    //     let scenario = test_scenario::begin(CREATOR);
-    //     let depositer = @0xBBB0AF;
+        let scenario = test_scenario::begin(CREATOR);
+        let depositer = @0xBBB0AF;
 
-    //     create_clock(ctx(&mut scenario));
-    //     test_scenario::next_tx(&mut scenario, CREATOR);
+        create_clock(ctx(&mut scenario));
+        test_scenario::next_tx(&mut scenario, CREATOR);
 
-    //     init(EVOS {}, ctx(&mut scenario));
-    //     // evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
-    //     test_scenario::next_tx(&mut scenario, CREATOR);
+        init(EVOS {}, ctx(&mut scenario));
+        // evosgenesisegg::init_for_test(evosgenesisegg::get_otw_for_test(), ctx(&mut scenario));
+        test_scenario::next_tx(&mut scenario, CREATOR);
 
-    //     let tracker = test_scenario::take_shared<MintTracker>(&scenario);
-    //     mint_egg_to_recipient(&mut tracker, depositer, ctx(&mut scenario));
+        let tracker = test_scenario::take_shared<MintTracker>(&scenario);
+        mint_egg_to_recipient(&mut tracker, depositer, ctx(&mut scenario));
 
-    //     test_scenario::next_tx(&mut scenario, depositer);
+        test_scenario::next_tx(&mut scenario, depositer);
 
-    //     let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
-    //     let clock = test_scenario::take_shared<Clock>(&scenario);
-    //     let egg = test_scenario::take_from_address<EvosGenesisEgg>(
-    //         &scenario,
-    //         depositer,
-    //     );
-    //     deposit(
-    //         &mut incubator,
-    //         egg,
-    //         &clock,
-    //         ctx(&mut scenario)
-    //     );
-    //     test_scenario::next_tx(&mut scenario, depositer);
+        let incubator = test_scenario::take_shared<Incubator>(&mut scenario);
+        let clock = test_scenario::take_shared<Clock>(&scenario);
+        let egg = test_scenario::take_from_address<EvosGenesisEgg>(
+            &scenario,
+            depositer,
+        );
+        deposit(
+            &mut incubator,
+            egg,
+            &clock,
+            ctx(&mut scenario)
+        );
+        test_scenario::next_tx(&mut scenario, depositer);
 
-    //     clock::increment_for_testing(&mut clock, REVEAL_TIME);
+        clock::increment_for_testing(&mut clock, REVEAL_TIME);
 
-    //     let slots_uids = &incubator.slots;
+        let slots_uids = &incubator.slots;
 
-    //     reveal(
-    //         &mut incubator,
-    //         &mut tracker,
-    //         *vector::borrow<ID>(slots_uids, 0),
-    //         &clock,
-    //         ctx(&mut scenario)
-    //     );
-    //     test_scenario::next_tx(&mut scenario, CREATOR);
+        reveal(
+            &mut incubator,
+            &mut tracker,
+            *vector::borrow<ID>(slots_uids, 0),
+            &clock,
+            ctx(&mut scenario)
+        );
+        test_scenario::next_tx(&mut scenario, CREATOR);
 
-    //     // Withdraw evos from kiosk
-    //     assert!(test_scenario::has_most_recent_shared<Kiosk>(), 0);
-    //     let kiosk = test_scenario::take_shared<Kiosk>(
-    //         &scenario,
-    //     );
+        // Withdraw evos from kiosk
+        assert!(test_scenario::has_most_recent_shared<Kiosk>(), 0);
+        let kiosk = test_scenario::take_shared<Kiosk>(
+            &scenario,
+        );
 
-    //     let publisher = sui::package::claim(EVOS {}, ctx(&mut scenario));
-    //     let (tx_policy, policy_cap) = withdraw_request::init_policy<Evos>(&publisher, ctx(&mut scenario));
+        let publisher = sui::package::claim(EVOS {}, ctx(&mut scenario));
+        let (tx_policy, policy_cap) = withdraw_request::init_policy<Evos>(&publisher, ctx(&mut scenario));
 
-    //     let evos_array = all_evos_ids(&incubator);
-    //     assert!(vector::length(&evos_array) > 0, 0);
-    //     let nft_id: ID = get_evos_id_at(&incubator, 0);
-    //     let (nft, request) = ob_kiosk::withdraw_nft_signed<Evos>(
-    //         &mut kiosk,
-    //         nft_id,
-    //         ctx(&mut scenario)
-    //     );
-    //     withdraw_request::confirm<Evos>(request, &tx_policy);
+        let evos_array = all_evos_ids(&incubator);
+        assert!(vector::length(&evos_array) > 0, 0);
+        let nft_id: ID = get_evos_id_at(&incubator, 0);
+        let (nft, request) = ob_kiosk::withdraw_nft_signed<Evos>(
+            &mut kiosk,
+            nft_id,
+            ctx(&mut scenario)
+        );
+        withdraw_request::confirm<Evos>(request, &tx_policy);
 
-    //     transfer::public_share_object(tx_policy);
-    //     transfer::public_transfer(policy_cap, depositer);
-    //     transfer::public_transfer(publisher, depositer);
+        transfer::public_share_object(tx_policy);
+        transfer::public_transfer(policy_cap, depositer);
+        transfer::public_transfer(publisher, depositer);
 
-    //     test_scenario::next_tx(&mut scenario, CREATOR);
+        test_scenario::next_tx(&mut scenario, CREATOR);
 
-    //     // Deposit evos back into the kiosk
-    //     let update_cap = test_scenario::take_from_address<UpdateCap>(&mut scenario, CREATOR);
-    //     set_xp(&mut nft, 20u32, ctx(&mut scenario));
-    //     test_scenario::next_tx(&mut scenario, CREATOR);
+        // Deposit evos back into the kiosk
+        let update_cap = test_scenario::take_from_address<UpdateCap>(&mut scenario, CREATOR);
+        set_xp(&mut nft, 20u32, ctx(&mut scenario));
+        test_scenario::next_tx(&mut scenario, CREATOR);
 
-    //     assert!(xp(&nft) == 20u32, 15);
-    //     //ob_kiosk::assert_listed(&mut kiosk, nft_id);
+        assert!(xp(&nft) == 20u32, 15);
+        //ob_kiosk::assert_listed(&mut kiosk, nft_id);
 
-    //     //test_scenario::next_tx(&mut scenario, CREATOR);
+        //test_scenario::next_tx(&mut scenario, CREATOR);
 
-    //     ob_kiosk::deposit(&mut kiosk, nft, ctx(&mut scenario));
-    //     test_scenario::next_tx(&mut scenario, CREATOR);
+        ob_kiosk::deposit(&mut kiosk, nft, ctx(&mut scenario));
+        test_scenario::next_tx(&mut scenario, CREATOR);
 
-    //     ob_kiosk::assert_not_listed(&mut kiosk, nft_id);
-    //     ob_kiosk::assert_not_exclusively_listed(&mut kiosk, nft_id);
+        ob_kiosk::assert_not_listed(&mut kiosk, nft_id);
+        ob_kiosk::assert_not_exclusively_listed(&mut kiosk, nft_id);
 
-    //     assert!(index(&incubator) == 1, 5);
+        assert!(index(&incubator) == 1, 5);
         
-    //     test_scenario::return_shared(incubator);
-    //     test_scenario::return_shared(clock);
-    //     test_scenario::return_shared(kiosk);
-    //     test_scenario::return_shared(tracker);
+        test_scenario::return_shared(incubator);
+        test_scenario::return_shared(clock);
+        test_scenario::return_shared(kiosk);
+        test_scenario::return_shared(tracker);
         
-    //     test_scenario::return_to_address(CREATOR, update_cap);
-    //     test_scenario::next_tx(&mut scenario, CREATOR);
-    //     test_scenario::end(scenario);
-    // }
+        test_scenario::return_to_address(CREATOR, update_cap);
+        test_scenario::next_tx(&mut scenario, CREATOR);
+        test_scenario::end(scenario);
+    } */
 
     #[test]
     fun test_species_rarity() {
