@@ -13,8 +13,8 @@ module knw_evos::utils {
         (mod as u64)
     }
 
-    #[test_only]
-    const CLOCK: address = @0x6;
+    //#[test_only]
+    //const CLOCK: address = @0x6;
 
     #[test_only]
     public fun create_clock(ctx: &mut sui::tx_context::TxContext) {

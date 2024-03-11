@@ -16,7 +16,8 @@ import {
     ALLOWLIST,
     GAME_ID,
     BORROW_POLICY_ID,
-    THREAD_CAP_ID 
+    THREAD_CAP_ID,
+    GAME_ADMIN_CAP_ID
 } from "./ids";
 
 // export type SuiEventFilter =
@@ -435,3 +436,57 @@ export const find_eligible_trait_box = async (
     return status;
 }
 
+/*
+    _: &GameAdminCap,
+    game: &mut EvosGame,
+    level: u32,
+    stage: vector<u8>,
+    names: vector<vector<u8>>,
+    values: vector<vector<u8>>,
+    urls: vector<vector<u8>>,
+    weights: vector<u8>,
+    price: u32,
+    _ctx: &mut TxContext
+*/
+export const add_new_traitbox = async (
+    tx: TransactionBlock,
+    level: number,
+    stage: Uint8Array,
+    names: Array<Uint8Array>,
+    values: Array<Uint8Array>,
+    urls: Array<Uint8Array>,
+    weights: Uint8Array,
+    price: number,
+    signer: RawSigner
+) => {
+    tx.moveCall({
+        target: `${EVOS_PACKAGE_ID}::${EVOS_MODULE_NAME}::confirm_box_receipt`,
+        arguments: [
+            tx.object(GAME_ADMIN_CAP_ID),
+            tx.object(GAME_ID),
+            tx.pure(level),
+            tx.pure(stage),
+            tx.pure(names),
+            tx.pure(values),
+            tx.pure(urls),
+            tx.pure(weights),
+            tx.pure(price)
+        ]
+    });
+    
+    const txn = await signer.signAndExecuteTransactionBlock({
+      transactionBlock: tx,
+      options: {
+        showEffects: true,
+        showObjectChanges: true,
+      },
+    });
+
+    // here we need to get the return value of the call
+    
+    let status = getExecutionStatusType(txn);
+    if(status == 'success'){
+      console.log("TraitBox created succesfully.");
+    }
+    return status;
+}

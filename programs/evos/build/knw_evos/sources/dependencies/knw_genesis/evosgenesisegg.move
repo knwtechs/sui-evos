@@ -2,8 +2,6 @@
 // Company: KNW Technologies FZCO
 // License: MIT
 
-// TODO FOR PUBLIC VERSION
-// 'active' flag on tracker
 module knw_genesis::evosgenesisegg {
 
     use std::option;
@@ -646,108 +644,114 @@ module knw_genesis::evosgenesisegg {
     /*************************************************/
     /*** REMOVE WHEN DEPLOYING OFFICIAL COLLECTION ***/
     /*************************************************/
+    
+    // #[test_only]
     public fun mint_for_test(
         tracker: &mut MintTracker,
         ctx: &mut TxContext
     ): EvosGenesisEgg {
-        assert!(false, ETestDisabled);
+        //assert!(false, ETestDisabled);
         let dw = witness::from_witness(Witness {});
         create_nft(dw, tracker, ctx)
     }
-    // public fun init_for_test(otw: EVOSGENESISEGG, ctx: &mut TxContext) {
-    //     let sender = tx_context::sender(ctx);
 
-    //     // Init Collection & MintCap with unlimited supply
-    //     let (collection, mint_cap) = collection::create_with_mint_cap<EVOSGENESISEGG, EvosGenesisEgg>(
-    //         &otw, option::some(MAX_SUPPLY), ctx
-    //     );
+    #[test_only]
+    public fun init_for_test(otw: EVOSGENESISEGG, ctx: &mut TxContext) {
+        let sender = tx_context::sender(ctx);
 
-    //     // Init Publisher
-    //     let publisher = sui::package::claim(otw, ctx);
-    //     let dw = witness::from_witness(Witness {});
+        // Init Collection & MintCap with unlimited supply
+        let (collection, mint_cap) = collection::create_with_mint_cap<EVOSGENESISEGG, EvosGenesisEgg>(
+            &otw, option::some(MAX_SUPPLY), ctx
+        );
 
-    //     // Init Display
-    //     let tags = vector[tags::art(), tags::game_asset()];
+        // Init Publisher
+        let publisher = sui::package::claim(otw, ctx);
+        let dw = witness::from_witness(Witness {});
 
-    //     let display = display::new<EvosGenesisEgg>(&publisher, ctx);
-    //     display::add(&mut display, string::utf8(b"name"), string::utf8(b"{name}"));
-    //     display::add(&mut display, string::utf8(b"image_url"), string::utf8(b"{url}"));
-    //     display::add(&mut display, string::utf8(b"tags"), ob_display::from_vec(tags));
-    //     display::update_version(&mut display);
+        // Init Display
+        let tags = vector[tags::art(), tags::game_asset()];
 
-    //     transfer::public_transfer(display, tx_context::sender(ctx));
+        let display = display::new<EvosGenesisEgg>(&publisher, ctx);
+        display::add(&mut display, string::utf8(b"name"), string::utf8(b"{name}"));
+        display::add(&mut display, string::utf8(b"image_url"), string::utf8(b"{url}"));
+        display::add(&mut display, string::utf8(b"tags"), ob_display::from_vec(tags));
+        display::update_version(&mut display);
 
-    //     let creators = vector[COLLECTION_CREATOR];
-    //     let shares = vector[10_000];
+        transfer::public_transfer(display, tx_context::sender(ctx));
 
-    //     // Creators domain
-    //     collection::add_domain(
-    //         dw,
-    //         &mut collection,
-    //         creators::new(utils::vec_set_from_vec(&creators)),
-    //     );
+        let creators = vector[COLLECTION_CREATOR];
+        let shares = vector[10_000];
 
-    //     collection::add_domain(
-    //         dw,
-    //         &mut collection,
-    //         display_info::new(
-    //             string::utf8(b"ev0s Genesis Eggs"),
-    //             string::utf8(b"Your ev0s Genesis Egg is your pass to reveal your ev0s and start your adventure on the planet of S.U.I.\n\nChoose wisely WHEN to reveal your Ev0s Genesis Egg! The Journey Begins"),
-    //         ),
-    //     );
+        // Creators domain
+        collection::add_domain(
+            dw,
+            &mut collection,
+            creators::new(utils::vec_set_from_vec(&creators)),
+        );
 
-    //     // 5. Setup royalty basis points
-    //     // 2_000 BPS == 20%
-    //     let shares = utils::from_vec_to_map(creators, shares);
-    //     royalty_strategy_bps::create_domain_and_add_strategy(
-    //         dw, &mut collection, royalty::from_shares(shares, ctx), 500, ctx,
-    //     );
+        collection::add_domain(
+            dw,
+            &mut collection,
+            display_info::new(
+                string::utf8(b"ev0s Genesis Eggs"),
+                string::utf8(b"Your ev0s Genesis Egg is your pass to reveal your ev0s and start your adventure on the planet of S.U.I.\n\nChoose wisely WHEN to reveal your Ev0s Genesis Egg! The Journey Begins"),
+            ),
+        );
 
-    //     // === TRANSFER POLICIES ===
+        // 5. Setup royalty basis points
+        // 2_000 BPS == 20%
+        let shares = utils::from_vec_to_map(creators, shares);
+        royalty_strategy_bps::create_domain_and_add_strategy(
+            dw, &mut collection, royalty::from_shares(shares, ctx), 500, ctx,
+        );
 
-    //     // 6. Creates a new policy and registers an allowlist rule to it.
-    //     // Therefore now to finish a transfer, the allowlist must be included
-    //     // in the chain.
-    //     let (transfer_policy, transfer_policy_cap) =
-    //         transfer_request::init_policy<EvosGenesisEgg>(&publisher, ctx);
+        // === TRANSFER POLICIES ===
 
-    //     royalty_strategy_bps::enforce(&mut transfer_policy, &transfer_policy_cap);
-    //     transfer_allowlist::enforce(&mut transfer_policy, &transfer_policy_cap);
+        // 6. Creates a new policy and registers an allowlist rule to it.
+        // Therefore now to finish a transfer, the allowlist must be included
+        // in the chain.
+        let (transfer_policy, transfer_policy_cap) =
+            transfer_request::init_policy<EvosGenesisEgg>(&publisher, ctx);
 
-    //     // 7. P2P Transfers are a separate transfer workflow and therefore require a
-    //     // separate policy
-    //     let (p2p_policy, p2p_policy_cap) =
-    //         transfer_request::init_policy<EvosGenesisEgg>(&publisher, ctx);
+        royalty_strategy_bps::enforce(&mut transfer_policy, &transfer_policy_cap);
+        transfer_allowlist::enforce(&mut transfer_policy, &transfer_policy_cap);
 
-    //     p2p_list::enforce(&mut p2p_policy, &p2p_policy_cap);
+        // 7. P2P Transfers are a separate transfer workflow and therefore require a
+        // separate policy
+        let (p2p_policy, p2p_policy_cap) =
+            transfer_request::init_policy<EvosGenesisEgg>(&publisher, ctx);
 
-    //     transfer::public_transfer(publisher, sender);
-    //     transfer::public_transfer(transfer_policy_cap, sender);
-    //     transfer::public_transfer(p2p_policy_cap, sender);
-    //     transfer::public_share_object(collection);
-    //     transfer::public_share_object(transfer_policy);
-    //     transfer::public_share_object(p2p_policy);
+        p2p_list::enforce(&mut p2p_policy, &p2p_policy_cap);
 
-    //     let tracker = create_tracker(
-    //         mint_cap,
-    //         MAX_SUPPLY,
-    //         SUI_FULL_PRICE,
-    //         SUI_WL_PRICE,
-    //         PUBLIC_START,
-    //         WL_START,
-    //         sender,
-    //         ctx
-    //     );
+        transfer::public_transfer(publisher, sender);
+        transfer::public_transfer(transfer_policy_cap, sender);
+        transfer::public_transfer(p2p_policy_cap, sender);
+        transfer::public_share_object(collection);
+        transfer::public_share_object(transfer_policy);
+        transfer::public_share_object(p2p_policy);
 
-    //     transfer::share_object(tracker);
-    //     transfer::public_transfer(MintTrackerCap {
-    //         id: object::new(ctx)
-    //     }, sender);
+        let tracker = create_tracker(
+            mint_cap,
+            MAX_SUPPLY,
+            SUI_FULL_PRICE,
+            SUI_WL_PRICE,
+            PUBLIC_START,
+            WL_START,
+            sender,
+            ctx
+        );
 
-    // }
-    // public fun get_otw_for_test(): EVOSGENESISEGG {
-    //     EVOSGENESISEGG {}
-    // }
+        transfer::share_object(tracker);
+        transfer::public_transfer(MintTrackerCap {
+            id: object::new(ctx)
+        }, sender);
+
+    }
+
+    #[test_only]
+    public fun get_otw_for_test(): EVOSGENESISEGG {
+        EVOSGENESISEGG {}
+    }
 
     #[test_only]
     use sui::test_scenario::{Self, ctx};

@@ -11,3 +11,4 @@ export const ROYALTY_STRATEGY_BPS = "0xba47fd986c197ce4f2f3ecd73539ace7ea3f7144c
 export const GAME_ID = ""
 export const BORROW_POLICY_ID = ""
 export const THREAD_CAP_ID = ""
+export const GAME_ADMIN_CAP_ID = ""
