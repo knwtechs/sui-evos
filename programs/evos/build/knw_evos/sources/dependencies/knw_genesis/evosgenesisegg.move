@@ -644,12 +644,13 @@ module knw_genesis::evosgenesisegg {
     /*************************************************/
     /*** REMOVE WHEN DEPLOYING OFFICIAL COLLECTION ***/
     /*************************************************/
+    
     // #[test_only]
     public fun mint_for_test(
         tracker: &mut MintTracker,
         ctx: &mut TxContext
     ): EvosGenesisEgg {
-        assert!(false, ETestDisabled);
+        //assert!(false, ETestDisabled);
         let dw = witness::from_witness(Witness {});
         create_nft(dw, tracker, ctx)
     }

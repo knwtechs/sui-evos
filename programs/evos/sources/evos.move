@@ -885,7 +885,7 @@ module knw_evos::evos {
         let dw = witness::from_witness(Witness {});
         let borrow = ob_kiosk::ob_kiosk::borrow_nft_mut<Evos>(kiosk, nft_id, std::option::none(), ctx);
         let nft: &mut Evos = ob_request::borrow_request::borrow_nft_ref_mut(dw, &mut borrow);
-        set_stage(nft, stage, uri, ctx);
+        set_stage(nft, stage, uri, 0, ctx);
         //update_url(nft, uri);
         ob_kiosk::ob_kiosk::return_nft<Witness, Evos>(kiosk, borrow, policy)
     }
